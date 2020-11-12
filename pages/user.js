@@ -4,20 +4,15 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { ColorPicker } from '../components/colorPicker';
 import { getUserFromCode } from "../utils/util";
-// import { connectToDatabase } from '../utils/mongodb';
-
-function compareArrays(a, b) {
-    return Array.isArray(a) &&
-    Array.isArray(b) &&
-    a.length === b.length &&
-    a.every((val, index) => val === b[index]);
-}
 
 export default function User()  {
 
     // const { db } = await connectToDatabase();
     // const users = await db.collection('users');
     const router = useRouter();
+    const contentType = 'application/json'
+    const [errors, setErrors] = useState({})
+    const [message, setMessage] = useState('')
     const {
         query: { pass },
       } = useRouter();
@@ -63,12 +58,13 @@ export default function User()  {
     const enterLobby = () => {
         if (user != '' && avatar != '') {
             let userInfoLocal = {
-                "user": user,
-                "avatar": avatar,
-                "color": color,
-                "tasksdone": 0,
+                "name": user,
+                "avatar_name": avatar,
+                "color": JSON.stringify(Array.from(Object.entries(color))),
+                "tasks": 0,
                 "imposter": false,
                 "kicked": false,
+                "voted": false,
             }
             setUserInfo(userInfoLocal);
             // if (collection != undefined) {
@@ -78,8 +74,8 @@ export default function User()  {
             // }
             
 
-            console.log(userInfoLocal);
-            updateUser(userInfoLocal);
+            // console.log(userInfoLocal);
+            postData(userInfoLocal);
             // router.push({
             //     pathname: "/lobby",
             //     query: {pass: pass}
@@ -87,13 +83,28 @@ export default function User()  {
         }
     }
     
-    const updateUser = async (user) => {
-      // console.log(user);
-      const res = await fetch('https://localhost:3000/api/users', {
-        method: 'post',
-        body: JSON.stringify(user),
-      });
-      console.log(res);
+    const postData = async (user) => {
+      try {
+        const res = await fetch('/api/players', {
+          method: 'POST',
+          headers: {
+            Accept: contentType,
+            'Content-Type': contentType,
+          },
+          body: JSON.stringify(user),
+        })
+        // Throw Error
+        if (!res.ok) {
+          throw new Error(res.status)
+        }
+
+        router.push({
+                pathname: "/lobby",
+                query: {pass: pass}
+        });
+      } catch (error) {
+        setMessage('Failed to add player');
+      }
     }
     return (
         
