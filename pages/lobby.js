@@ -5,8 +5,9 @@ import Head from 'next/head';
 import { getUserFromCode } from "../utils/util";
 import dbConnect from '../utils/dbConnect';
 import Player from '../models/Player';
+import Button from '@material-ui/core/Button';
 
-export default function Lobby({ players }) {
+export default function Lobby({ playersFromData }) {
     const {
         query: { pass },
       } = useRouter();
@@ -17,7 +18,9 @@ export default function Lobby({ players }) {
     const [errors, setErrors] = useState({})
     const [message, setMessage] = useState('')
     const [player, setPlayer] = useState({})
-    const [otherPlayers, setOtherPlayers] = useState({})
+    const [otherPlayers, setOtherPlayers] = useState(new Set())
+    const [admin, setAdmin] = useState(false)
+    const [vote, setVote] = useState(false)
     useEffect(() => {
 
         let query_vals = getUserFromCode(pass);
@@ -28,10 +31,43 @@ export default function Lobby({ players }) {
             if (pwd in val) {
                 setAuthenticated(true);
                 setUser(query_vals[1]);
+                if (query_vals[1] === 'admin') {
+                  setAdmin(true);
+                } else {
+                  setAdmin(false);
+                }
             }
         });
+
+        currentUserDataFromPlayers(query_vals[1]);
+        console.log(player);
         
-    },[]);
+    },[player]);
+    
+    const currentUserDataFromPlayers = (user_name) => {
+      playersFromData.map((playerFromData) => {
+        if (typeof playerFromData.color === "string") {
+          playerFromData.color = new Map(JSON.parse(playerFromData.color))
+        }
+        if (user_name != 'admin' && playerFromData.name === user_name) {
+          setPlayer(playerFromData);
+          setVote(playerFromData.voted);
+        } else {
+          otherPlayers.add(playerFromData);
+        }
+      })
+    }
+
+    useEffect(() => {
+      console.log("Changes occured in player");
+    }, [vote])
+
+    const recordVoting = () => {
+      player.voted = true;
+      setVote(player.voted);
+      console.log('Voting recorder');
+      console.log(player);
+    }
 
     return (
         <div>
@@ -42,17 +78,112 @@ export default function Lobby({ players }) {
                 <h1 className='title'>
                     Welcome {user}
                 </h1>
-                <div className="grid">
-                    {players.map((player) => (
-                        <div key={player._id}>
-                            
+                {
+                  user === 'Admin'
+                  ?
+                  <div className="grid">
+                    
+                    {Array.from(otherPlayers).map((otherPlayer) => (
+                      
+                        <div key={otherPlayer._id}>
+                                
                                 <div className="card">
-                                    <h3>{player.avatar_name} </h3>
+                                  <div className="card-content">
+                                    <div className="card-content-child-names-action">
+                                      <div className="card-content-child-names">
+                                        <h3>{otherPlayer.avatar_name} </h3>
+                                        <p>{otherPlayer.name}</p>
+                                      </div>
+                                      <div className="card-content-child-action">
+                                                    {
+                                            player.kicked ? player.imposter ?
+                                            <p>Imposter kicked</p>
+                                            :<p>Crewmate Kicked</p>:
+                                            <p>Player active</p>
+                                          }
+                                      </div>
+                                    </div>
+                                    <div className="card-content-child-color" style={{backgroundColor: `rgba(${otherPlayer.color.get('r')}, ${otherPlayer.color.get('g')}, ${otherPlayer.color.get('b')}, ${otherPlayer.color.get('a')})`}} >
+                                      
+                                    </div>
+                                  </div>
+                                    
                                 </div>
                             </div>
                         
                     ))}
                 </div>
+                
+                  :
+                  <div className="grid">
+                  <div key={player._id}>   
+                      <div className="card self">
+                      <div className="card-content">
+                        <div className="card-content-child-names-action">
+                          <div className="card-content-child-names">
+                            <h3>{player.avatar_name} </h3>
+                            <p>{player.name}</p>
+                          </div>
+                          <div className="card-content-child-action">
+                            {
+                              player.imposter ?
+                              <p>Imposter</p>
+                              :
+                              <p>Crewmate</p>
+                            }
+                          </div>
+                        </div>
+                        {player.color === undefined? null :  <div className="card-content-child-color" style={{backgroundColor: `rgba(${player.color.get('r')}, ${player.color.get('g')}, ${player.color.get('b')}, ${player.color.get('a')})`}} >
+                          
+                          </div>}
+                        
+                      </div>
+                      </div>
+                    </div>
+                    
+                    {Array.from(otherPlayers).map((otherPlayer) => (
+
+                      <>
+                        {
+                          otherPlayer.name != 'Admin'
+                          ?
+                          <div key={otherPlayer._id}>
+                                {console.log(otherPlayer)}
+                                <div className="card">
+                                  <div className="card-content">
+                                    <div className="card-content-child-names-action">
+                                      <div className="card-content-child-names">
+                                        <h3>{otherPlayer.avatar_name} </h3>
+                                        <p>{otherPlayer.name}</p>
+                                      </div>
+                                      <div className="card-content-child-action">
+                                        {
+                                          vote ?
+                                          <Button variant="outlined" disabled>
+                                            Vote
+                                          </Button>
+                                          :
+                                          <Button variant="outlined" color="primary" onClick={recordVoting}>
+                                            Vote
+                                          </Button>
+                                        }
+                                      </div>
+                                    </div>
+                                    <div className="card-content-child-color" style={{backgroundColor: `rgba(${otherPlayer.color.get('r')}, ${otherPlayer.color.get('g')}, ${otherPlayer.color.get('b')}, ${otherPlayer.color.get('a')})`}} >
+                                      
+                                    </div>
+                                  </div>
+                                    
+                                </div>
+                            </div>
+                          :
+                          null
+                        }
+                        </>
+                    ))}
+                </div>
+                
+                }
                 
             </main>
             <style jsx>
@@ -104,14 +235,14 @@ export default function Lobby({ players }) {
                             align-items: center;
                             justify-content: center;
                             flex-wrap: wrap;
-                  
                             max-width: 800px;
                             margin-top: 3rem;
                           }
                   
                           .card {
+                            display: flex;
                             margin: 1rem;
-                            flex-basis: 45%;
+                            flex-basis: 50%;
                             padding: 1.5rem;
                             text-align: left;
                             color: inherit;
@@ -119,6 +250,27 @@ export default function Lobby({ players }) {
                             border: 1px solid #eaeaea;
                             border-radius: 10px;
                             transition: color 0.15s ease, border-color 0.15s ease;
+                          }
+
+                          .card-content {
+                            display: flex;
+                            flex-grow: 1;
+                            order: 1;
+                            height: 100%;
+                            justify-content: space-between;
+                          }
+
+                          .self {
+                            border-color: #76FF03;
+                            background-color: #DCEDC8;
+                          }
+
+                          .card-content-child-color {
+                            order: 2;
+                            flex-grow: 2;
+                            border: 2px solid #eaeaea;
+                            border-radius: 10px;
+                            width: 5rem;
                           }
 
                           .pointer {
@@ -135,6 +287,17 @@ export default function Lobby({ players }) {
                           .card h3 {
                             margin: 0 0 1rem 0;
                             font-size: 1.5rem;
+                          }
+                          .card-content-child-names-action {
+                            display: flex;
+                            order: 1;
+                            flex-grow: 4;
+                            margin-right: 1em;
+                            align-items: center;
+                          }
+
+                          .card-content-child-names {
+                            margin-right: 1em;
                           }
                   
                           .card p {
@@ -175,5 +338,5 @@ export async function getServerSideProps() {
         return player
     });
 
-    return { props: { players: players } }
+    return { props: { playersFromData: players } }
 }
