@@ -12,6 +12,7 @@ export default function Lobby({ playersFromData }) {
         query: { pass },
       } = useRouter();
     const router = useRouter();
+    const contentType = 'application/json';
     const [authenticated, setAuthenticated] = useState(false);
     const [load, setLoad] = useState(false);
     const [user, setUser] = useState('');
@@ -62,11 +63,40 @@ export default function Lobby({ playersFromData }) {
       console.log("Changes occured in player");
     }, [vote])
 
-    const recordVoting = () => {
+    const recordVoting = (otherPlayer) => {
       player.voted = true;
       setVote(player.voted);
       console.log('Voting recorder');
       console.log(player);
+      postData(otherPlayer)
+    }
+
+    const postData = async (otherPlayer) => {
+      let voteData = {
+        "name": player.name,
+        "voted": otherPlayer
+      };
+      try {
+        const res = await fetch('/api/votes', {
+          method: 'POST',
+          headers: {
+            Accept: contentType,
+            'Content-Type': contentType,
+          },
+          body: JSON.stringify(voteData),
+        })
+        // Throw Error
+        if (!res.ok) {
+          throw new Error(res.status)
+        }
+
+        router.push({
+                pathname: "/lobby",
+                query: {pass: pass}
+        });
+      } catch (error) {
+        setMessage('Failed to vote');
+      }
     }
 
     return (
@@ -163,7 +193,7 @@ export default function Lobby({ playersFromData }) {
                                             Vote
                                           </Button>
                                           :
-                                          <Button variant="outlined" color="primary" onClick={recordVoting}>
+                                          <Button variant="outlined" color="primary" onClick={() => recordVoting(otherPlayer.name)}>
                                             Vote
                                           </Button>
                                         }
