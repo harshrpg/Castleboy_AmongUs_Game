@@ -29,10 +29,34 @@ const useStyles = makeStyles({
     boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
     margin: '1rem'
   },
+  round: {
+    background: 'linear-gradient(45deg, #56ab2f 30%, #a8e063 90%)',
+    borderRadius: 3,
+    border: 0,
+    color: 'white',
+    height: 48,
+    padding: '0 30px',
+    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+    margin: '1rem'
+  },
+  round_disabled: {
+    background: 'linear-gradient(45deg, #bdc3c7 30%, #2c3e50 90%)',
+    borderRadius: 3,
+    border: 0,
+    color: 'white',
+    height: 48,
+    padding: '0 30px',
+    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+    margin: '1rem'
+  },
   label: {
     textTransform: 'uppercase',
   },
 });
+
+const getRandomInt = (max) => {
+  return Math.floor(Math.random() * Math.floor(max));
+}
 
 export default function Lobby({ playersFromData }) {
   const classes = useStyles();
@@ -51,6 +75,9 @@ export default function Lobby({ playersFromData }) {
     const [admin, setAdmin] = useState(false)
     const [vote, setVote] = useState(false)
     const [ghosts, setGhosts] = useState(new Set())
+    const [isImposter, setIsImposter] = useState(false);
+    const [imposter, setImposter] = useState({});
+    const [round, setRound] = useState(false)
     useEffect(() => {
 
         let query_vals = getUserFromCode(pass);
@@ -133,6 +160,73 @@ export default function Lobby({ playersFromData }) {
       }
     }
 
+    const assignImposter = () => {
+      let randomInt = -1;
+      do {
+        setImposter({})
+        randomInt = getRandomInt(playersFromData.length - 1);
+        setImposter(playersFromData[randomInt]);
+        setIsImposter(true);
+        console.log("IMPOSTER:: ",playersFromData[randomInt]);
+      } while (playersFromData[randomInt]['name'] === 'Admin');
+      postImposter(playersFromData[randomInt]);
+      alert('Imposter assigned');
+    }
+
+    const returnNewPlayer = (player) => {
+      return {
+        "name": player.name,
+        "avatar_name": player.avatar_name,
+        "color": JSON.stringify(Array.from(Object.entries(returnColorObject(player.color)))),
+        "tasks": player.tasks,
+        "imposter": player.imposter,
+        "kicked": player.kicked,
+        "voted": player.voted,
+    }
+    }
+
+    const returnColorObject = (colorMap) => {
+      return {
+        "r": colorMap.get('r'),
+        "g": colorMap.get('g'),
+        "b": colorMap.get('b'),
+        "a": colorMap.get('a'),
+      }
+    }
+
+    const postImposter = async (imposter) => {
+      playersFromData.map(async (player) => {
+        let newPlayer = returnNewPlayer(player);
+        if (newPlayer["name"] === imposter["name"]) {
+          console.log("Imposter found");
+          newPlayer.imposter = true;
+        } else {
+          newPlayer.imposter = false;
+        }
+        console.log(newPlayer);
+        try {
+          const res = await fetch('/api/players', {
+            method: 'POST',
+            headers: {
+              Accept: contentType,
+              'Content-Type': contentType,
+            },
+            body: JSON.stringify(newPlayer),
+          })
+          // Throw Error
+          if (!res.ok) {
+            throw new Error(res.status)
+          }
+        } catch (error) {
+          setMessage('Failed to add player');
+        }
+      })
+    }
+
+    const startRound = () => {
+      setRound(true);
+    }
+
     return (
         <div>
             <Head>
@@ -146,9 +240,21 @@ export default function Lobby({ playersFromData }) {
                   user === 'Admin'
                   ?
                   <>
+                    <p className="description">Round Status:  
+                    {
+                      round
+                      ?
+                      <span> Started</span>:<span> Not Started</span>
+                    }
+                    </p>
                     <span>Active Players: {otherPlayers.size}</span>
                     <span>Ghosts: {ghosts.size}</span>
-                    <span>Imposters: 1</span>
+                    {
+                      isImposter
+                      ?<span>Imposters: 1</span>
+                      :<span>Imposters: 0</span>
+                    }
+                    
                   </>
                   :
                     vote
@@ -183,7 +289,17 @@ export default function Lobby({ playersFromData }) {
                                           }
                                       </div>
                                     </div>
-                                    <div className="card-content-child-color" style={{backgroundColor: `rgba(${otherPlayer.color.get('r')}, ${otherPlayer.color.get('g')}, ${otherPlayer.color.get('b')}, ${otherPlayer.color.get('a')})`}} >
+                                    {
+                                      console.log('====================================')
+                                    }
+                                    {
+                                      console.log(typeof otherPlayer.color.get('r'))
+                                    }
+
+{
+                                      console.log(`rgba(${parseInt(otherPlayer.color.get('r'))}, ${parseInt(otherPlayer.color.get('g'))}, ${parseInt(otherPlayer.color.get('b'))}, ${parseInt(otherPlayer.color.get('a'))})`)
+                                    }
+                                    <div className="card-content-child-color" style={{backgroundColor: `rgba(${parseInt(otherPlayer.color.get('r'))}, ${parseInt(otherPlayer.color.get('g'))}, ${parseInt(otherPlayer.color.get('b'))}, ${parseInt(otherPlayer.color.get('a'))})`}} >
                                       
                                     </div>
                                   </div>
@@ -196,10 +312,36 @@ export default function Lobby({ playersFromData }) {
                                       root: classes.voting,
                                       label: classes.label,
                                     }} variant="contained">Voting Results</Button>
-                    <Button classes={{
-                                      root: classes.imposter,
-                                      label: classes.label,
-                                    }} variant="contained">Assign Imposter</Button>
+                    
+                    {
+                      isImposter
+                      ?
+                      <>
+                      <Button classes={{
+                        root: classes.imposter,
+                        label: classes.label,
+                      }} variant="contained" disabled>Assign Imposter</Button>
+                      <Button classes={{
+                        root: classes.round,
+                        label: classes.label,
+                      }} variant="contained" onClick={startRound}>
+                        Start Round
+                      </Button>
+                      </>
+                      :
+                      <>
+                      <Button classes={{
+                        root: classes.imposter,
+                        label: classes.label,
+                      }} variant="contained" onClick={assignImposter}>Assign Imposter</Button>
+                      <Button classes={{
+                        root: classes.round,
+                        label: classes.label,
+                      }} variant="contained" disabled>
+                        Start Round
+                      </Button>
+                      </>
+                    }
                 </div>
                 
                   :
