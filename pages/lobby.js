@@ -6,8 +6,36 @@ import { getUserFromCode } from "../utils/util";
 import dbConnect from '../utils/dbConnect';
 import Player from '../models/Player';
 import Button from '@material-ui/core/Button';
+import { makeStyles } from '@material-ui/core/styles';
+
+const useStyles = makeStyles({
+  imposter: {
+    background: 'linear-gradient(45deg, #cc2b5e 30%, #753a88 90%)',
+    borderRadius: 3,
+    border: 0,
+    color: 'white',
+    height: 48,
+    padding: '0 30px',
+    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+    margin: '1rem'
+  },
+  voting: {
+    background: 'linear-gradient(45deg, #2193b0 30%, #6dd5ed 90%)',
+    borderRadius: 3,
+    border: 0,
+    color: 'white',
+    height: 48,
+    padding: '0 30px',
+    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+    margin: '1rem'
+  },
+  label: {
+    textTransform: 'uppercase',
+  },
+});
 
 export default function Lobby({ playersFromData }) {
+  const classes = useStyles();
     const {
         query: { pass },
       } = useRouter();
@@ -22,6 +50,7 @@ export default function Lobby({ playersFromData }) {
     const [otherPlayers, setOtherPlayers] = useState(new Set())
     const [admin, setAdmin] = useState(false)
     const [vote, setVote] = useState(false)
+    const [ghosts, setGhosts] = useState(new Set())
     useEffect(() => {
 
         let query_vals = getUserFromCode(pass);
@@ -54,7 +83,12 @@ export default function Lobby({ playersFromData }) {
           setPlayer(playerFromData);
           setVote(playerFromData.voted);
         } else {
-          otherPlayers.add(playerFromData);
+          if (playerFromData.kicked) {
+            ghosts.add(playerFromData)
+          } else {
+            otherPlayers.add(playerFromData);
+          }
+          
         }
       })
     }
@@ -111,6 +145,22 @@ export default function Lobby({ playersFromData }) {
                 {
                   user === 'Admin'
                   ?
+                  <>
+                    <span>Active Players: {otherPlayers.size}</span>
+                    <span>Ghosts: {ghosts.size}</span>
+                    <span>Imposters: 1</span>
+                  </>
+                  :
+                    vote
+                  ?
+                    <p className="description">You have voted now</p>
+                  :
+                    null
+                }
+                
+                {
+                  user === 'Admin'
+                  ?
                   <div className="grid">
                     
                     {Array.from(otherPlayers).map((otherPlayer) => (
@@ -142,6 +192,14 @@ export default function Lobby({ playersFromData }) {
                             </div>
                         
                     ))}
+                    <Button classes={{
+                                      root: classes.voting,
+                                      label: classes.label,
+                                    }} variant="contained">Voting Results</Button>
+                    <Button classes={{
+                                      root: classes.imposter,
+                                      label: classes.label,
+                                    }} variant="contained">Assign Imposter</Button>
                 </div>
                 
                   :
@@ -177,8 +235,8 @@ export default function Lobby({ playersFromData }) {
                         {
                           otherPlayer.name != 'Admin'
                           ?
+                          
                           <div key={otherPlayer._id}>
-                                {console.log(otherPlayer)}
                                 <div className="card">
                                   <div className="card-content">
                                     <div className="card-content-child-names-action">
@@ -219,6 +277,9 @@ export default function Lobby({ playersFromData }) {
             <style jsx>
                 {
                     `
+                      #voting-result-btn {
+                        margin: 0.25rem;
+                      }
                         input {
                             width: 100%; 
                             border-style: solid;
