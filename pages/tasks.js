@@ -4,8 +4,27 @@ import React, { useState, useEffect } from 'react';
 import data from './data/passwords.json';
 import { useRouter } from 'next/router';
 import TaskViewCard from "../components/taskViewCard";
+import Button from '@material-ui/core/Button';
+import { makeStyles } from '@material-ui/core/styles';
+
+const useStyles = makeStyles({
+    get_lobby: {
+      background: 'linear-gradient(45deg, #9d50bb 30%, #6e48aa 90%)',
+      borderRadius: 3,
+      border: 0,
+      color: 'white',
+      height: 48,
+      padding: '0 30px',
+      boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+      margin: '1rem'
+    },
+    label: {
+      textTransform: 'uppercase',
+    },
+  });
 
 export default function Tasks() {
+    const classes = useStyles();
     const router = useRouter();
     const {
         query: { pass },
@@ -32,6 +51,13 @@ export default function Tasks() {
         
         
       },[]);
+
+      const goToLobby = () => {
+        router.push({
+          pathname: "/lobby",
+          query: {pass: pass}
+        })
+      }
     return (
         <div>
             {
@@ -73,7 +99,14 @@ export default function Tasks() {
                                     
                                 ))
                             }
+                            <Button classes={{
+                                                root: classes.get_lobby,
+                                                label: classes.label,
+                                            }} variant='contained' onClick={goToLobby}>
+                                Go to lobby
+                            </Button>
                         </main>
+                        
                     </div>
                 :
                 "Nothing to show here"
