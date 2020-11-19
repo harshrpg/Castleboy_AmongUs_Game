@@ -266,6 +266,13 @@ export default function Lobby({ playersFromData }) {
       }
     }
 
+    const gotToTasks = () => {
+      router.push({
+        pathname: "/tasks",
+        query: {pass: pass}
+      })
+    }
+
     return (
         <div>
             <Head>
@@ -443,7 +450,7 @@ export default function Lobby({ playersFromData }) {
                   <Button classes={{
                         root: classes.get_tasks,
                         label: classes.label,
-                      }} variant='contained'>
+                      }} variant='contained' onClick={gotToTasks}>
                     Get Your Tasks
                   </Button>
                   </div>
