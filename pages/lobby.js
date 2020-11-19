@@ -49,6 +49,16 @@ const useStyles = makeStyles({
     boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
     margin: '1rem'
   },
+  get_tasks: {
+    background: 'linear-gradient(45deg, #9d50bb 30%, #6e48aa 90%)',
+    borderRadius: 3,
+    border: 0,
+    color: 'white',
+    height: 48,
+    padding: '0 30px',
+    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+    margin: '1rem'
+  },
   label: {
     textTransform: 'uppercase',
   },
@@ -77,7 +87,9 @@ export default function Lobby({ playersFromData }) {
     const [ghosts, setGhosts] = useState(new Set())
     const [isImposter, setIsImposter] = useState(false);
     const [imposter, setImposter] = useState({});
-    const [round, setRound] = useState(false)
+    const [round, setRound] = useState(false);
+    const [roundNumber, setRoundNumber] = useState(0)
+    const [playNumber, setPlayNumber] = useState(0)
     useEffect(() => {
 
         let query_vals = getUserFromCode(pass);
@@ -224,7 +236,34 @@ export default function Lobby({ playersFromData }) {
     }
 
     const startRound = () => {
+      let rN = roundNumber + 1;
+      setRoundNumber(rN);
       setRound(true);
+      let roundData = {
+        "number": rN,
+        "imposter_name": imposter.name,
+        "winner": "None",
+      }
+      postRoundData(roundData);
+    }
+
+    const postRoundData = async (roundData) => {
+      try {
+        const res = await fetch('/api/rounds', {
+          method: 'POST',
+          headers: {
+            Accept: contentType,
+            'Content-Type': contentType,
+          },
+          body: JSON.stringify(roundData),
+        })
+        // Throw Error
+        if (!res.ok) {
+          throw new Error(res.status)
+        }
+      } catch (error) {
+        setMessage('Failed to add round');
+      }
     }
 
     return (
@@ -289,16 +328,6 @@ export default function Lobby({ playersFromData }) {
                                           }
                                       </div>
                                     </div>
-                                    {
-                                      console.log('====================================')
-                                    }
-                                    {
-                                      console.log(typeof otherPlayer.color.get('r'))
-                                    }
-
-{
-                                      console.log(`rgba(${parseInt(otherPlayer.color.get('r'))}, ${parseInt(otherPlayer.color.get('g'))}, ${parseInt(otherPlayer.color.get('b'))}, ${parseInt(otherPlayer.color.get('a'))})`)
-                                    }
                                     <div className="card-content-child-color" style={{backgroundColor: `rgba(${parseInt(otherPlayer.color.get('r'))}, ${parseInt(otherPlayer.color.get('g'))}, ${parseInt(otherPlayer.color.get('b'))}, ${parseInt(otherPlayer.color.get('a'))})`}} >
                                       
                                     </div>
@@ -411,7 +440,13 @@ export default function Lobby({ playersFromData }) {
                         }
                         </>
                     ))}
-                </div>
+                  <Button classes={{
+                        root: classes.get_tasks,
+                        label: classes.label,
+                      }} variant='contained'>
+                    Get Your Tasks
+                  </Button>
+                  </div>
                 
                 }
                 
