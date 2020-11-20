@@ -4,6 +4,20 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { ColorPicker } from '../components/colorPicker';
 import { getUserFromCode } from "../utils/util";
+import {
+  withStyles,
+  makeStyles,
+} from '@material-ui/core/styles';
+import TextField from '@material-ui/core/TextField';
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    '& > *': {
+      margin: theme.spacing(1),
+      width: '25ch',
+    },
+  },
+}));
 
 export default function User()  {
 
@@ -106,13 +120,44 @@ export default function User()  {
         setMessage('Failed to add player');
       }
     }
+
+    const classes = useStyles();
+
+    const CssTextField = withStyles({
+      root: {
+        '& label.Mui-focused': {
+          color: '#b84a62',
+        },
+        '& .MuiInput-underline:after': {
+          borderBottomColor: '#b84a62',
+        },
+        '& input': {
+          color: '#b84a62',
+        },
+        '& label': {
+          color: '#4f5d75',
+        },
+        '& .MuiOutlinedInput-root': {
+          '& fieldset': {
+            borderColor: '#fdfffc',
+          },
+          '&:hover fieldset': {
+            borderColor: '#fdfffc',
+          },
+          '&.Mui-focused fieldset': {
+            borderColor: '#fc9e4f',
+          }
+        },
+      },
+    })(TextField);
+
     return (
         
         <div> 
             {
                 authenticated ?
                     load ?
-                    <div>
+                    <div style={{background: '#dfe0e2', color: '#071013'}}>
                         <Head>
                             <title>Welcome {user}</title>
                         </Head>
@@ -131,7 +176,9 @@ export default function User()  {
 
                                 <div className="card">
                                     <h3>Select Avatar Name </h3>
-                                    <input type="text" name="avatar" onChange={handleAvatarNameChange}/>
+                                    <form className={classes.root} noValidate autoComplete="off">
+                                      <TextField id="standard-basic" label="Avatar Name" color="primary" onChange={handleAvatarNameChange}/>
+                                    </form>
                                 </div>
 
                                 <div className="card pointer" onClick={enterLobby}>

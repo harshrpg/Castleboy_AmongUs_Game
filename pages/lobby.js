@@ -274,13 +274,13 @@ export default function Lobby({ playersFromData }) {
     }
 
     return (
-        <div>
+        <div style={{background: '#dfe0e2'}}>
             <Head>
                 <title>Welcome to Lobby {user}</title>
             </Head>
             <main>
                 <h1 className='title'>
-                    Welcome {user}
+                    Lobby
                 </h1>
                 {
                   user === 'Admin'

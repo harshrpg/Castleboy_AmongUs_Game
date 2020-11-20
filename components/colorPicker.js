@@ -52,7 +52,7 @@ export const ColorPicker = props => {
                     }
                     .swatch {            
                         padding: 5px;
-                        background: #fff;
+                        background: transparent;
                         border-radius: 1px;
                         box-shadow: 0px 1px #888888;
                         cursor: pointer;

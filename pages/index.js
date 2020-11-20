@@ -175,7 +175,7 @@ export default function Index() {
                           root: classes.enter_game,
                           label: classes.label,
                         }} variant='contained' onClick={handleClick}>
-                      Get Your Tasks
+                      Enter Game
             </Button>
           </Grid>
           </Grid>
