@@ -2,12 +2,20 @@ import React, { useState, useEffect } from 'react';
 import data from './data/passwords.json';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { getUserFromCode } from "../utils/util";
+import { getUserFromCode, convertVotingResultsToDisplayFormat, findIfVotedIsImposter } from "../utils/util";
 import dbConnect from '../utils/dbConnect';
 import Player from '../models/Player';
 import Button from '@material-ui/core/Button';
 import { makeStyles } from '@material-ui/core/styles';
-
+import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
+import Typography from '@material-ui/core/Typography';
+import ButtonBase from '@material-ui/core/ButtonBase';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import Container from '@material-ui/core/Container';
+import { CardMedia } from '@material-ui/core';
+import Card from '@material-ui/core/Card';
+import CardActionArea from '@material-ui/core/CardActionArea';
 const useStyles = makeStyles({
   imposter: {
     background: 'linear-gradient(45deg, #cc2b5e 30%, #753a88 90%)',
@@ -57,10 +65,24 @@ const useStyles = makeStyles({
     height: 48,
     padding: '0 30px',
     boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
-    margin: '1rem'
+    margin: '1rem',
   },
   label: {
     textTransform: 'uppercase',
+  },
+  paper: {
+    height: 140,
+    width: 100,
+  },
+  image: {
+    width: 128,
+    height: 128,
+  },
+  img: {
+    margin: 'auto',
+    display: 'block',
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
 });
 
@@ -88,10 +110,13 @@ export default function Lobby({ playersFromData }) {
     const [isImposter, setIsImposter] = useState(false);
     const [imposter, setImposter] = useState({});
     const [round, setRound] = useState(false);
-    const [roundNumber, setRoundNumber] = useState(0)
+    const [roundNumber, setRoundNumber] = useState(1)
     const [playNumber, setPlayNumber] = useState(0)
+    const [showVoting, setShowVoting] = useState(false)
+    const [votingResults, setVotingResults] = useState(new Map())
+    const [result, setResult] = useState({})
     useEffect(() => {
-
+        setShowVoting(false);
         let query_vals = getUserFromCode(pass);
         let pwd = query_vals[0];
         let ifLoad = query_vals[1] != '' ? true : false;
@@ -132,9 +157,51 @@ export default function Lobby({ playersFromData }) {
       })
     }
 
+    const displayVotingResults = () => {
+      if (round) {
+        try {
+          fetch('/api/votes', {
+            method: 'GET',
+          }).then(response => response.json()).then(data => processVotingResult(data))
+          // Throw Error
+          // if (!res.ok) {
+          //   throw new Error(res.status)
+          // } else {
+          //   console.log('====================================');
+          //   console.log(res.json());
+          //   console.log('====================================');
+          // }
+        } catch (error) {
+          console.log(error);
+        }
+      } else {
+        alert('Round not yet started')
+      }
+      
+    }
+
+    const processVotingResult = (votingResult) => {
+      console.log('====================================');
+      console.log(votingResult.data);
+      console.log('====================================');
+      let reformatVotingResult = convertVotingResultsToDisplayFormat(votingResult.data)
+      console.log('====================================');
+      console.log(reformatVotingResult);
+      console.log('====================================');
+      // setShowVoting(true);
+      setVotingResults(reformatVotingResult);
+      let ghosted = findIfVotedIsImposter(reformatVotingResult, imposter, playersFromData);
+      console.log('====================================');
+      console.log('GHOST FOUND');
+      console.log(ghosted);
+      setResult(ghosted);
+      console.log('====================================');
+
+    }
+
     useEffect(() => {
-      console.log("Changes occured in player");
-    }, [vote])
+      setShowVoting(true);
+    }, [votingResults])
 
     const recordVoting = (otherPlayer) => {
       player.voted = true;
@@ -177,8 +244,7 @@ export default function Lobby({ playersFromData }) {
       do {
         setImposter({})
         randomInt = getRandomInt(playersFromData.length - 1);
-        setImposter(playersFromData[randomInt]);
-        setIsImposter(true);
+        
         console.log("IMPOSTER:: ",playersFromData[randomInt]);
       } while (playersFromData[randomInt]['name'] === 'Admin');
       postImposter(playersFromData[randomInt]);
@@ -212,6 +278,8 @@ export default function Lobby({ playersFromData }) {
         if (newPlayer["name"] === imposter["name"]) {
           console.log("Imposter found");
           newPlayer.imposter = true;
+          setImposter(newPlayer);
+          setIsImposter(true);
         } else {
           newPlayer.imposter = false;
         }
@@ -236,11 +304,9 @@ export default function Lobby({ playersFromData }) {
     }
 
     const startRound = () => {
-      let rN = roundNumber + 1;
-      setRoundNumber(rN);
       setRound(true);
       let roundData = {
-        "number": rN,
+        "number": roundNumber,
         "imposter_name": imposter.name,
         "winner": "None",
       }
@@ -273,8 +339,13 @@ export default function Lobby({ playersFromData }) {
       })
     }
 
+    const resetRound = () => {
+      setRound(false);
+      setShowVoting(false);
+    }
+
     return (
-        <div style={{background: '#dfe0e2'}}>
+        <div>
             <Head>
                 <title>Welcome to Lobby {user}</title>
             </Head>
@@ -313,6 +384,129 @@ export default function Lobby({ playersFromData }) {
                 {
                   user === 'Admin'
                   ?
+                  showVoting
+                  ?
+                  <>
+                  <Container maxWidth="sm">
+                      
+                  {
+                    result.type != 'undefined'
+                    ? result.type === 'imposter' ?
+                    <Grid
+                    container
+                    direction="column"
+                    justify="center"
+                    alignItems="center"
+                    spacing={4}
+                  >
+                        <Grid item>
+                          <Card style={{width: 345, background: 'transparent'}}>
+                            <CardActionArea>
+                                <CardMedia
+                                  style={{height: 200}}
+                                  image="/images/imposter2.jpg"
+                                />
+                            </CardActionArea>
+                          </Card>
+                          
+                        </Grid>
+                        <Grid item>
+                            <span className="title">
+                              Imposter: {result.player.value}  found
+                            </span>
+                        </Grid>
+                    </Grid>
+                    : 
+                    <Grid
+                        container
+                        direction="column"
+                        justify="center"
+                        alignItems="center"
+                        spacing={4}
+                      >
+                    <Grid item>
+                    <Card style={{width: 345, background: 'transparent'}}>
+                      <CardActionArea>
+                          <CardMedia
+                            style={{height: 200}}
+                            image="/images/crewmate.jpg"
+                          />
+                      </CardActionArea>
+                    </Card>
+                    
+                  </Grid>
+                  <Grid item>
+                            <span className="title">
+                              Crewmate: {result.player.value} Ghosted
+                            </span>
+                        </Grid>
+                  </Grid>
+                    :
+                    <Grid
+                    container
+                    direction="column"
+                    justify="center"
+                    alignItems="center"
+                    spacing={4}
+                  >
+                        <Grid item>
+                          <Card style={{width: 345, background: 'transparent'}}>
+                            <CardActionArea>
+                                <CardMedia
+                                  style={{height: 200}}
+                                  image="/images/killer_loose.jpg"
+                                />
+                            </CardActionArea>
+                          </Card>
+                          
+                        </Grid>
+                        <Grid item>
+                            <span className="title">
+                              No one was ghosted
+                            </span>
+                        </Grid>
+                    </Grid>
+                    
+                  }
+                    </Container>
+                  <Grid container justify="center" spacing={4} direction="column" alignItems="center">
+
+                    {
+                      Array.from(votingResults.keys()).map((key) => {
+                        return (
+                        <div className="paper">
+                        <Grid key={key} item>
+                          <Grid item xs={12} sm container spacing={2}>
+                            <Typography gutterBottom variant="h4">
+                              {key}
+                            </Typography>
+                            <Grid item xs container spacing={2}>
+                              <Grid item xs spacing={2}>
+                              {
+                                votingResults.get(key).map((voter) => (
+                                  <div key={voter} style={{padding: "0.5rem"}}>
+                                    <Typography key={voter} variant="title" gutterBottom>
+                                      {voter} 
+                                    </Typography>
+                                  </div>
+                                  
+                                ))
+                              }
+                              </Grid>
+                            </Grid>
+                          </Grid>
+                        </Grid>
+                        </div>
+                      )})
+                    }
+                    <Button classes={{
+                                      root: classes.voting,
+                                      label: classes.label,
+                                    }} variant="contained" onClick={resetRound}>Back to Lobby</Button>  
+                  </Grid>
+                  </>
+                  :
+                  <div className="grid2">
                   <div className="grid">
                     
                     {Array.from(otherPlayers).map((otherPlayer) => (
@@ -344,44 +538,49 @@ export default function Lobby({ playersFromData }) {
                             </div>
                         
                     ))}
-                    <Button classes={{
-                                      root: classes.voting,
-                                      label: classes.label,
-                                    }} variant="contained">Voting Results</Button>
                     
-                    {
-                      isImposter
-                      ?
-                      <>
-                      <Button classes={{
-                        root: classes.imposter,
-                        label: classes.label,
-                      }} variant="contained" disabled>Assign Imposter</Button>
-                      <Button classes={{
-                        root: classes.round,
-                        label: classes.label,
-                      }} variant="contained" onClick={startRound}>
-                        Start Round
-                      </Button>
-                      </>
-                      :
-                      <>
-                      <Button classes={{
-                        root: classes.imposter,
-                        label: classes.label,
-                      }} variant="contained" onClick={assignImposter}>Assign Imposter</Button>
-                      <Button classes={{
-                        root: classes.round,
-                        label: classes.label,
-                      }} variant="contained" disabled>
-                        Start Round
-                      </Button>
-                      </>
-                    }
+                    
+                    
                 </div>
                 
+                <Button classes={{
+                                      root: classes.voting,
+                                      label: classes.label,
+                                    }} variant="contained" onClick={displayVotingResults}>Voting Results</Button>
+                  {
+                    isImposter
+                    ?
+                    <>
+                    <Button classes={{
+                      root: classes.imposter,
+                      label: classes.label,
+                    }} variant="contained" disabled>Assign Imposter</Button>
+                    <Button classes={{
+                      root: classes.round,
+                      label: classes.label,
+                    }} variant="contained" onClick={startRound}>
+                      Start Round
+                    </Button>
+                    </>
+                    :
+                    <>
+                    <Button classes={{
+                      root: classes.imposter,
+                      label: classes.label,
+                    }} variant="contained" onClick={assignImposter}>Assign Imposter</Button>
+                    <Button classes={{
+                      root: classes.round,
+                      label: classes.label,
+                    }} variant="contained" disabled>
+                      Start Round
+                    </Button>
+                    </>
+                  }
+                </div>
                   :
-                  <div className="grid">
+                  
+                  <Grid container justify="center" alignItems="center" direction="column" spacing={4}>
+                  <Grid container justify="center" spacing={4}>
                   <div key={player._id}>   
                       <div className="card self">
                       <div className="card-content">
@@ -447,20 +646,33 @@ export default function Lobby({ playersFromData }) {
                         }
                         </>
                     ))}
+                  </Grid>
+                  
                   <Button classes={{
-                        root: classes.get_tasks,
-                        label: classes.label,
-                      }} variant='contained' onClick={gotToTasks}>
-                    Get Your Tasks
-                  </Button>
-                  </div>
-                
+                    root: classes.get_tasks,
+                    label: classes.label,
+                  }} variant='contained' onClick={gotToTasks}>
+                Get Your Tasks
+              </Button>
+              </Grid>
                 }
                 
             </main>
-            <style jsx>
+            <style jsx global>
                 {
-                    `
+                    ` 
+                      body {
+                      background-color: #171d1c;
+                      color: #efe9f4;
+                      }
+                      .paper {
+                        margin: 2rem;
+                        padding: 2rem;
+                        border: 1px solid #eb5160;
+                        border-radius: 1rem;
+                        background: #071013;
+                        color: #b7999c;
+                      }
                       #voting-result-btn {
                         margin: 0.25rem;
                       }
@@ -476,7 +688,7 @@ export default function Lobby({ playersFromData }) {
                             flex-direction: column;
                             justify-content: center;
                             align-items: center;
-                            font-family: sofia;
+                            font-family: amongus_1;
                         }
 
                         .title a {
@@ -491,7 +703,7 @@ export default function Lobby({ playersFromData }) {
                           }
                   
                           .title {
-                            margin: 0;
+                            margin-bottom: 2rem;
                             line-height: 1.15;
                             font-size: 2rem;
                           }
@@ -505,6 +717,9 @@ export default function Lobby({ playersFromData }) {
                             line-height: 1.5;
                             font-size: 1.5rem;
                           }
+                          .grid-container: {
+                            margin: 2rem;
+                          }
                           .grid {
                             display: flex;
                             align-items: center;
@@ -512,6 +727,16 @@ export default function Lobby({ playersFromData }) {
                             flex-wrap: wrap;
                             max-width: 800px;
                             margin-top: 3rem;
+                          }
+
+                          .grid2 {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-wrap: wrap;
+                            max-width: 800px;
+                            margin-top: 3rem;
+
                           }
                   
                           .card {
@@ -537,7 +762,7 @@ export default function Lobby({ playersFromData }) {
 
                           .self {
                             border-color: #76FF03;
-                            background-color: #DCEDC8;
+                            // background-color: #DCEDC8;
                           }
 
                           .card-content-child-color {
@@ -595,6 +820,11 @@ export default function Lobby({ playersFromData }) {
                         @font-face {
                             font-family: "sofia";
                             src: url("/fonts/sofia.ttf");
+                          }
+
+                          @font-face {
+                            font-family: "amongus_1";
+                            src: url("/fonts/amongus_1.ttf");
                           }
                     `
                 }
