@@ -42,10 +42,14 @@ export default function TaskViewCard(props) {
         />
         <CardContent>
           <Typography gutterBottom variant="h5" component="h2" className={classes.rootTyp}>
-            {props.header} Room
+            <span className="header">
+              {props.header} Room
+            </span>
           </Typography>
           <Typography variant="body2" component="p" className={classes.subTyp}>
-            {props.task}
+          <span className="header">
+              {props.task}
+            </span>
           </Typography>
         </CardContent>
       </CardActionArea>
@@ -57,6 +61,21 @@ export default function TaskViewCard(props) {
           Learn More
         </Button>
       </CardActions> */}
+
+      <style jsx>
+        {
+          `
+            .header {
+              font-family: amongus_1;
+            }
+
+            @font-face {
+              font-family: "amongus_1";
+              src: url("/fonts/amongus_1.ttf");
+            }
+          `
+        }
+      </style>
     </Card>
     );
 }

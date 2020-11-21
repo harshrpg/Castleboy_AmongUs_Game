@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { getUserFromCode } from "../utils/util";
 import React, { useState, useEffect } from 'react';
 import data from './data/passwords.json';
+import tasks from './data/tasks.json';
 import { useRouter } from 'next/router';
 import TaskViewCard from "../components/taskViewCard";
 import Button from '@material-ui/core/Button';
@@ -32,7 +33,6 @@ export default function Tasks() {
     const [user, setUser] = useState('');
     const [authenticated, setAuthenticated] = useState(false);
     const [load, setLoad] = useState(false);
-    const [tasks, setTasks] = useState([{'type': 'electrical', 'value': 1},{'type': 'admin', 'value': 2},{'type': 'it', 'value': 3},{'type': 'security', 'value': 4},{'type': 'pets', 'value': 5}])
 
     useEffect(() => {
 
@@ -85,7 +85,7 @@ export default function Tasks() {
                                             ?
                                                 <TaskViewCard media="/images/Admin.webp" header="Admin" task={task.value}/>
                                             :
-                                            task['type'] === 'it'
+                                            task['type'] === 'communications'
                                             ?
                                                 <TaskViewCard media="/images/DownloadUploadData.webp" header="Communications" task={task.value}/>
                                             :
@@ -137,7 +137,7 @@ export default function Tasks() {
                             flex-direction: column;
                             justify-content: center;
                             align-items: center;
-                            font-family: sofia;
+                            font-family: amongus_1;
                         }
 
                         .title a {
@@ -224,6 +224,11 @@ export default function Tasks() {
                         @font-face {
                             font-family: "sofia";
                             src: url("/fonts/sofia.ttf");
+                          }
+
+                          @font-face {
+                            font-family: "amongus_1";
+                            src: url("/fonts/amongus_1.ttf");
                           }
                     `
                 }

@@ -1,0 +1,26 @@
+[
+    {
+        "type": "electrical", "value": "Somebody has broken the connection for security buzzers. Go and fix it"
+    },
+    {
+        "type": "admin", "value": "Captain TJ is a hardworking pupper. Your job is to pamper him. Brush him for 10 seconds"
+    },
+    {
+        "type": "communications", "value": "Can you use the tablet and welcome the aliens from all the portals on the wall ?"
+    },
+    {
+        "type": "security", "value": "Make sure all the doors in the house are closed"
+    },
+    {
+        "type": "electrical", "value": "Our pizza box home made led circuit is broken. Can you fix it major ?"
+    },
+    {
+        "type": "admin", "value": "We need ventilation, Open all the doors lieutenant"
+    },
+    {
+        "type": "admin", "value": "Find the treasure cups and make a tower. We need to impress the aliens"
+    },
+    {
+        "type": "admin", "value": "Make sure aliens don't access our security systems. Find the key card (it's green) and swipe it on the security phone"
+    }
+]
