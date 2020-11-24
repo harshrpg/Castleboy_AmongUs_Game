@@ -191,12 +191,33 @@ export default function Lobby({ playersFromData }) {
       // setShowVoting(true);
       setVotingResults(reformatVotingResult);
       let ghosted = findIfVotedIsImposter(reformatVotingResult, imposter, playersFromData);
-      console.log('====================================');
-      console.log('GHOST FOUND');
       console.log(ghosted);
       setResult(ghosted);
-      console.log('====================================');
+      // Send this ghosted data to server
+      prepareGhostDataAndUpdateServer(ghosted);
+    }
 
+    const prepareGhostDataAndUpdateServer = (ghost) => {
+      let newPlayer = {}
+      if (ghost != undefined && ghost.type != undefined && ghost.player != undefined && playersFromData != undefined) {
+        console.log("Updating server with ghost data:  ", ghost);
+        playersFromData.map((player) => {
+          if (player.name === ghost.player) {
+            console.log(ghost.player, " is ghosted and is a ", ghost.type);
+            newPlayer = returnNewPlayer(player);
+            if (ghost.type === "imposter") {
+              newPlayer.imposter = true;
+            } else if (ghost.type === "crewmate") {
+              newPlayer.kicked = true;
+            }
+          }
+        });
+        console.log("Updating Player: ", newPlayer);
+        if (newPlayer.name != null)
+          updatePlayerOnServer(newPlayer);
+      }
+      
+      
     }
 
     useEffect(() => {
@@ -249,26 +270,59 @@ export default function Lobby({ playersFromData }) {
       } while (playersFromData[randomInt]['name'] === 'Admin');
       postImposter(playersFromData[randomInt]);
       alert('Imposter assigned');
+
+      setRound(true);
+      let roundData = {
+        "number": roundNumber,
+        "imposter_name": imposter.name,
+        "winner": "None",
+      }
+      postRoundData(roundData);
     }
 
     const returnNewPlayer = (player) => {
-      return {
-        "name": player.name,
-        "avatar_name": player.avatar_name,
-        "color": JSON.stringify(Array.from(Object.entries(returnColorObject(player.color)))),
-        "tasks": player.tasks,
-        "imposter": player.imposter,
-        "kicked": player.kicked,
-        "voted": player.voted,
-    }
+      if (player.name != null) {
+        return {
+          "name": player.name,
+          "avatar_name": player.avatar_name,
+          "color": JSON.stringify(Array.from(Object.entries(returnColorObject(player.color)))),
+          "tasks": player.tasks,
+          "imposter": player.imposter,
+          "kicked": player.kicked,
+          "voted": player.voted,
+      }
+      }
+      
     }
 
     const returnColorObject = (colorMap) => {
-      return {
-        "r": colorMap.get('r'),
-        "g": colorMap.get('g'),
-        "b": colorMap.get('b'),
-        "a": colorMap.get('a'),
+      if (colorMap != undefined) {
+        return {
+          "r": colorMap.get('r'),
+          "g": colorMap.get('g'),
+          "b": colorMap.get('b'),
+          "a": colorMap.get('a'),
+        }
+      }
+      
+    }
+
+    const updatePlayerOnServer = async (newPlayer) => {
+      try {
+        const res = await fetch('/api/players', {
+          method: 'POST',
+          headers: {
+            Accept: contentType,
+            'Content-Type': contentType,
+          },
+          body: JSON.stringify(newPlayer),
+        })
+        // Throw Error
+        if (!res.ok) {
+          throw new Error(res.status)
+        }
+      } catch (error) {
+        setMessage('Failed to add player');
       }
     }
 
@@ -284,33 +338,12 @@ export default function Lobby({ playersFromData }) {
           newPlayer.imposter = false;
         }
         console.log(newPlayer);
-        try {
-          const res = await fetch('/api/players', {
-            method: 'POST',
-            headers: {
-              Accept: contentType,
-              'Content-Type': contentType,
-            },
-            body: JSON.stringify(newPlayer),
-          })
-          // Throw Error
-          if (!res.ok) {
-            throw new Error(res.status)
-          }
-        } catch (error) {
-          setMessage('Failed to add player');
+        if (newPlayer.name != null) {
+          updatePlayerOnServer(newPlayer);
         }
+        
+        console.log(playersFromData);
       })
-    }
-
-    const startRound = () => {
-      setRound(true);
-      let roundData = {
-        "number": roundNumber,
-        "imposter_name": imposter.name,
-        "winner": "None",
-      }
-      postRoundData(roundData);
     }
 
     const postRoundData = async (roundData) => {
@@ -342,6 +375,19 @@ export default function Lobby({ playersFromData }) {
     const resetRound = () => {
       setRound(false);
       setShowVoting(false);
+    }
+
+    const restartRound = () => {
+      console.warn("Restarting Round now");
+      console.log(playersFromData);
+      setIsImposter(false);
+      setRound(false);
+      console.log(imposter);
+      if (imposter != undefined && imposter.name != null) {
+        imposter.imposter = false;
+        updatePlayerOnServer(imposter);
+      }
+      console.log("All players crewmate");
     }
 
     return (
@@ -384,268 +430,291 @@ export default function Lobby({ playersFromData }) {
                 {
                   user === 'Admin'
                   ?
-                  showVoting
-                  ?
-                  <>
-                  <Container maxWidth="sm">
-                      
-                  {
-                    result.type != 'undefined'
-                    ? result.type === 'imposter' ?
-                    <Grid
-                    container
-                    direction="column"
-                    justify="center"
-                    alignItems="center"
-                    spacing={4}
-                  >
-                        <Grid item>
-                          <Card style={{width: 345, background: 'transparent'}}>
-                            <CardActionArea>
-                                <CardMedia
-                                  style={{height: 200}}
-                                  image="/images/imposter2.jpg"
-                                />
-                            </CardActionArea>
-                          </Card>
-                          
-                        </Grid>
-                        <Grid item>
-                            <span className="title">
-                              Imposter: {result.player.value}  found
-                            </span>
-                        </Grid>
-                    </Grid>
-                    : 
-                    <Grid
-                        container
-                        direction="column"
-                        justify="center"
-                        alignItems="center"
-                        spacing={4}
-                      >
-                    <Grid item>
-                    <Card style={{width: 345, background: 'transparent'}}>
-                      <CardActionArea>
-                          <CardMedia
-                            style={{height: 200}}
-                            image="/images/crewmate.jpg"
-                          />
-                      </CardActionArea>
-                    </Card>
-                    
-                  </Grid>
-                  <Grid item>
-                            <span className="title">
-                              Crewmate: {result.player.value} Ghosted
-                            </span>
-                        </Grid>
-                  </Grid>
-                    :
-                    <Grid
-                    container
-                    direction="column"
-                    justify="center"
-                    alignItems="center"
-                    spacing={4}
-                  >
-                        <Grid item>
-                          <Card style={{width: 345, background: 'transparent'}}>
-                            <CardActionArea>
-                                <CardMedia
-                                  style={{height: 200}}
-                                  image="/images/killer_loose.jpg"
-                                />
-                            </CardActionArea>
-                          </Card>
-                          
-                        </Grid>
-                        <Grid item>
-                            <span className="title">
-                              No one was ghosted
-                            </span>
-                        </Grid>
-                    </Grid>
-                    
-                  }
-                    </Container>
-                  <Grid container justify="center" spacing={4} direction="column" alignItems="center">
-
-                    {
-                      Array.from(votingResults.keys()).map((key) => {
-                        return (
-                        <div className="paper">
-                        <Grid key={key} item>
-                          <Grid item xs={12} sm container spacing={2}>
-                            <Typography gutterBottom variant="h4">
-                              {key}
-                            </Typography>
-                            <Grid item xs container spacing={2}>
-                              <Grid item xs spacing={2}>
-                              {
-                                votingResults.get(key).map((voter) => (
-                                  <div key={voter} style={{padding: "0.5rem"}}>
-                                    <Typography key={voter} variant="title" gutterBottom>
-                                      {voter} 
-                                    </Typography>
-                                  </div>
-                                  
-                                ))
-                              }
-                              </Grid>
-                            </Grid>
-                          </Grid>
-                        </Grid>
-                        </div>
-                      )})
-                    }
-                    <Button classes={{
-                                      root: classes.voting,
-                                      label: classes.label,
-                                    }} variant="contained" onClick={resetRound}>Back to Lobby</Button>  
-                  </Grid>
-                  </>
-                  :
-                  <div className="grid2">
-                  <div className="grid">
-                    
-                    {Array.from(otherPlayers).map((otherPlayer) => (
-                      
-                        <div key={otherPlayer._id}>
+                    showVoting
+                      ?
+                        // ADMIN PAGE: SHOW VOTING
+                        <>
+                          <Container maxWidth="sm">
+                            
+                          {
+                            result.type != undefined && result.player != undefined
+                            ? 
+                              result.type === 'imposter' 
+                              ?
+                                <Grid
+                                container
+                                direction="column"
+                                justify="center"
+                                alignItems="center"
+                                spacing={4}
+                                >
+                                  <Grid item>
+                                    <Card style={{width: 345, background: 'transparent'}}>
+                                      <CardActionArea>
+                                          <CardMedia
+                                            style={{height: 200}}
+                                            image="/images/imposter2.jpg"
+                                          />
+                                      </CardActionArea>
+                                    </Card>
+                                    
+                                  </Grid>
+                                  <Grid item>
+                                      <span className="title">
+                                        Imposter: {result.player.value}  found
+                                      </span>
+                                  </Grid>
+                                </Grid>
+                              : 
+                                <Grid
+                                  container
+                                  direction="column"
+                                  justify="center"
+                                  alignItems="center"
+                                  spacing={4}
+                                >
+                                  <Grid item>
+                                <Card style={{width: 345, background: 'transparent'}}>
+                                  <CardActionArea>
+                                      <CardMedia
+                                        style={{height: 200}}
+                                        image="/images/crewmate.jpg"
+                                      />
+                                  </CardActionArea>
+                                </Card>
                                 
-                                <div className="card">
-                                  <div className="card-content">
-                                    <div className="card-content-child-names-action">
-                                      <div className="card-content-child-names">
-                                        <h3>{otherPlayer.avatar_name} </h3>
-                                        <p>{otherPlayer.name}</p>
-                                      </div>
-                                      <div className="card-content-child-action">
-                                                    {
-                                            player.kicked ? player.imposter ?
-                                            <p>Imposter kicked</p>
-                                            :<p>Crewmate Kicked</p>:
-                                            <p>Player active</p>
-                                          }
-                                      </div>
-                                    </div>
-                                    <div className="card-content-child-color" style={{backgroundColor: `rgba(${parseInt(otherPlayer.color.get('r'))}, ${parseInt(otherPlayer.color.get('g'))}, ${parseInt(otherPlayer.color.get('b'))}, ${parseInt(otherPlayer.color.get('a'))})`}} >
-                                      
-                                    </div>
-                                  </div>
-                                    
-                                </div>
-                            </div>
-                        
-                    ))}
-                    
-                    
-                    
-                </div>
-                
-                <Button classes={{
-                                      root: classes.voting,
-                                      label: classes.label,
-                                    }} variant="contained" onClick={displayVotingResults}>Voting Results</Button>
-                  {
-                    isImposter
-                    ?
-                    <>
-                    <Button classes={{
-                      root: classes.imposter,
-                      label: classes.label,
-                    }} variant="contained" disabled>Assign Imposter</Button>
-                    <Button classes={{
-                      root: classes.round,
-                      label: classes.label,
-                    }} variant="contained" onClick={startRound}>
-                      Start Round
-                    </Button>
-                    </>
-                    :
-                    <>
-                    <Button classes={{
-                      root: classes.imposter,
-                      label: classes.label,
-                    }} variant="contained" onClick={assignImposter}>Assign Imposter</Button>
-                    <Button classes={{
-                      root: classes.round,
-                      label: classes.label,
-                    }} variant="contained" disabled>
-                      Start Round
-                    </Button>
-                    </>
-                  }
-                </div>
-                  :
-                  
-                  <Grid container justify="center" alignItems="center" direction="column" spacing={4}>
-                  <Grid container justify="center" spacing={4}>
-                  <div key={player._id}>   
-                      <div className="card self">
-                      <div className="card-content">
-                        <div className="card-content-child-names-action">
-                          <div className="card-content-child-names">
-                            <h3>{player.avatar_name} </h3>
-                            <p>{player.name}</p>
-                          </div>
-                          <div className="card-content-child-action">
+                              </Grid>
+                                  <Grid item>
+                                    <span className="title">
+                                      Crewmate: {result.player.value} Ghosted
+                                    </span>
+                                  </Grid>
+                                </Grid>
+                            :
+                              <Grid
+                                container
+                                direction="column"
+                                justify="center"
+                                alignItems="center"
+                                spacing={4}
+                              >
+                                <Grid item>
+                                  <Card style={{width: 345, background: 'transparent'}}>
+                                    <CardActionArea>
+                                        <CardMedia
+                                          style={{height: 200}}
+                                          image="/images/killer_loose.jpg"
+                                        />
+                                    </CardActionArea>
+                                  </Card>
+                                  
+                                </Grid>
+                                <Grid item>
+                                    <span className="title">
+                                      No one was ghosted
+                                    </span>
+                                </Grid>
+                              </Grid>
+                          }
+                        </Container>
+                          <Grid container justify="center" spacing={4} direction="column" alignItems="center">
+
                             {
-                              player.imposter ?
-                              <p>Imposter</p>
-                              :
-                              <p>Crewmate</p>
+                              Array.from(votingResults.keys()).map((key) => {
+                                return (
+                                <div className="paper">
+                                  <Grid key={key} item>
+                                    <Grid item xs={12} sm container spacing={2}>
+                                      <Typography gutterBottom variant="h4">
+                                        {key}
+                                      </Typography>
+                                      <Grid item xs container spacing={2}>
+                                        <Grid item xs spacing={2}>
+                                        {
+                                          votingResults.get(key).map((voter) => (
+                                            <div key={voter} style={{padding: "0.5rem"}}>
+                                              <Typography key={voter} variant="title" gutterBottom>
+                                                {voter} 
+                                              </Typography>
+                                            </div>
+                                            
+                                          ))
+                                        }
+                                        </Grid>
+                                      </Grid>
+                                    </Grid>
+                                  </Grid>
+                                </div>
+                              )})
                             }
+                          <Button classes={{
+                                            root: classes.voting,
+                                            label: classes.label,
+                                          }} variant="contained" onClick={resetRound}>Back to Lobby</Button>  
+                        </Grid>
+                        </>
+                      :
+                        // ADMIN PAGE: SHOW PLAYERS
+                        <Grid container justify="center" spacing={2} direction="column" alignItems="center">
+                          <Grid item container justify="center" spacing={1} alignItems="center">
+                            {
+                              Array.from(otherPlayers).map((otherPlayer) => (
+                                
+                                otherPlayer.name != null
+                                ?
+                                  <div key={otherPlayer._id}>
+                                    <div className="card">
+                                      <div className="card-content">
+                                        <div className="card-content-child-names-action">
+                                          <div className="card-content-child-names">
+                                            <h3>{otherPlayer.avatar_name} </h3>
+                                            <p>{otherPlayer.name}</p>
+                                          </div>
+                                          <div className="card-content-child-action">
+                                              {
+                                                player.kicked 
+                                                  ? 
+                                                    player.imposter 
+                                                      ?
+                                                        <p>Imposter kicked</p>
+                                                      :
+                                                        <p>Crewmate Kicked</p>
+                                                  :
+                                                    <p>Player active</p>
+                                              }
+                                          </div>
+                                        </div>
+                                        <div className="card-content-child-color" style={{backgroundColor: `rgba(${parseInt(otherPlayer.color.get('r'))}, ${parseInt(otherPlayer.color.get('g'))}, ${parseInt(otherPlayer.color.get('b'))}, ${parseInt(otherPlayer.color.get('a'))})`}} >
+                                        </div>
+                                      </div>
+                                              
+                                    </div>
+                                  </div> 
+                                :
+                                  null
+                              ))
+                            }
+                          </Grid>
+                          <Grid item ontainer justify="center" spacing={1}>
+                            <Button classes={{
+                                            root: classes.voting,
+                                            label: classes.label,
+                                            }} variant="contained" onClick={displayVotingResults}>
+                              Voting Results
+                            </Button>
+                            {
+                              isImposter
+                              ?
+                                <>
+                                  <Button classes={{
+                                                    root: classes.imposter,
+                                                    label: classes.label,
+                                                  }} variant="contained" disabled>
+                                    Assign Imposter
+                                  </Button>
+                                  <Button classes={{
+                                                    root: classes.round,
+                                                    label: classes.label,
+                                                  }} variant="contained" onClick={restartRound}>
+                                    Restart Round
+                                  </Button>
+                                </>
+                              :
+                                <>
+                                  <Button classes={{
+                                                    root: classes.imposter,
+                                                    label: classes.label,
+                                                  }} variant="contained" onClick={assignImposter}>
+                                    Assign Imposter
+                                  </Button>
+                                </>
+                            }
+                        </Grid>
+                        </Grid>
+                  :
+                    // USER PAGE: SHOW LOBBY SELF CARD
+                    <Grid container justify="center" alignItems="center" direction="column" spacing={4}>
+                      <Grid container justify="center" spacing={4}>
+                        <div key={player._id}>   
+                          <div className="card self">
+                            <div className="card-content">
+                              <div className="card-content-child-names-action">
+                                <div className="card-content-child-names">
+                                  <h3>{player.avatar_name} </h3>
+                                  <p>{player.name}</p>
+                                </div>
+                                <div className="card-content-child-action">
+                                  {
+                                    player.imposter 
+                                    ?
+                                      <p>Imposter</p>
+                                    :
+                                      <p>Crewmate</p>
+                                  }
+                                </div>
+                              </div>
+                              {
+                                player.color === undefined
+                                ?
+                                  null 
+                                :  
+                                  <div 
+                                    className="card-content-child-color" 
+                                    style={
+                                      {
+                                        backgroundColor: `rgba(${player.color.get('r')}, ${player.color.get('g')}, ${player.color.get('b')}, ${player.color.get('a')})`
+                                      }
+                                    } 
+                                  />
+                              }
+                            </div>
                           </div>
                         </div>
-                        {player.color === undefined? null :  <div className="card-content-child-color" style={{backgroundColor: `rgba(${player.color.get('r')}, ${player.color.get('g')}, ${player.color.get('b')}, ${player.color.get('a')})`}} >
-                          
-                          </div>}
-                        
-                      </div>
-                      </div>
-                    </div>
-                    
-                    {Array.from(otherPlayers).map((otherPlayer) => (
-
-                      <>
-                        {
-                          otherPlayer.name != 'Admin'
-                          ?
-                          
-                          <div key={otherPlayer._id}>
-                                <div className="card">
-                                  <div className="card-content">
-                                    <div className="card-content-child-names-action">
-                                      <div className="card-content-child-names">
-                                        <h3>{otherPlayer.avatar_name} </h3>
-                                        <p>{otherPlayer.name}</p>
-                                      </div>
-                                      <div className="card-content-child-action">
-                                        {
-                                          vote ?
-                                          <Button variant="outlined" disabled>
-                                            Vote
-                                          </Button>
-                                          :
-                                          <Button variant="outlined" color="primary" onClick={() => recordVoting(otherPlayer.name)}>
-                                            Vote
-                                          </Button>
-                                        }
+                        {/* USER PAGE: LOBBY OTHER PLAYERS */}
+                          {
+                            Array.from(otherPlayers).map((otherPlayer) => (
+                              <>
+                                {
+                                  otherPlayer.name != 'Admin' && otherPlayer.name != null
+                                  ?
+                                    <div key={otherPlayer._id}>
+                                      <div className="card">
+                                        <div className="card-content">
+                                          <div className="card-content-child-names-action">
+                                            <div className="card-content-child-names">
+                                              <h3>{otherPlayer.avatar_name} </h3>
+                                              <p>{otherPlayer.name}</p>
+                                            </div>
+                                            <div className="card-content-child-action">
+                                              {
+                                                player.kicked || otherPlayer.ghosted || vote ?
+                                                <Button variant="outlined" disabled>
+                                                  Vote
+                                                </Button>
+                                                :
+                                                <Button variant="outlined" color="primary" onClick={() => recordVoting(otherPlayer.name)}>
+                                                  Vote
+                                                </Button>
+                                              }
+                                            </div>
+                                          </div>
+                                          <div 
+                                            className="card-content-child-color" 
+                                            style={
+                                              {
+                                                backgroundColor: `rgba(${otherPlayer.color.get('r')}, ${otherPlayer.color.get('g')}, ${otherPlayer.color.get('b')}, ${otherPlayer.color.get('a')})`
+                                              }
+                                            } />
+                                        </div>  
                                       </div>
                                     </div>
-                                    <div className="card-content-child-color" style={{backgroundColor: `rgba(${otherPlayer.color.get('r')}, ${otherPlayer.color.get('g')}, ${otherPlayer.color.get('b')}, ${otherPlayer.color.get('a')})`}} >
-                                      
-                                    </div>
-                                  </div>
-                                    
-                                </div>
-                            </div>
-                          :
-                          null
-                        }
-                        </>
-                    ))}
+                                  :
+                                    null
+                                }
+                                </>
+                            
+                            ))
+                          }
                   </Grid>
                   
                   <Button classes={{

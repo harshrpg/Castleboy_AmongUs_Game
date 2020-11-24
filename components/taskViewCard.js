@@ -43,7 +43,12 @@ export default function TaskViewCard(props) {
         <CardContent>
           <Typography gutterBottom variant="h5" component="h2" className={classes.rootTyp}>
             <span className="header">
-              {props.header} Room
+              {
+                props.header === "Kill them all" || props.header === "Its all politics"
+                ? props.header
+                : props.header + "Room"
+              }
+              
             </span>
           </Typography>
           <Typography variant="body2" component="p" className={classes.subTyp}>
