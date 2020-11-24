@@ -15,6 +15,7 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import Container from '@material-ui/core/Container';
 import { CardMedia } from '@material-ui/core';
 import Card from '@material-ui/core/Card';
+import ButtonGroup from '@material-ui/core/ButtonGroup';
 import CardActionArea from '@material-ui/core/CardActionArea';
 const useStyles = makeStyles({
   imposter: {
@@ -108,13 +109,14 @@ export default function Lobby({ playersFromData }) {
     const [vote, setVote] = useState(false)
     const [ghosts, setGhosts] = useState(new Set())
     const [isImposter, setIsImposter] = useState(false);
-    const [imposter, setImposter] = useState({});
+    const [imposter, setImposter] = useState([]);
     const [round, setRound] = useState(false);
     const [roundNumber, setRoundNumber] = useState(1)
     const [playNumber, setPlayNumber] = useState(0)
     const [showVoting, setShowVoting] = useState(false)
     const [votingResults, setVotingResults] = useState(new Map())
     const [result, setResult] = useState({})
+    const [numberofimposters, setNumberofimposters] = useState(1)
     useEffect(() => {
         setShowVoting(false);
         let query_vals = getUserFromCode(pass);
@@ -261,16 +263,9 @@ export default function Lobby({ playersFromData }) {
     }
 
     const assignImposter = () => {
-      let randomInt = -1;
-      do {
-        setImposter({})
-        randomInt = getRandomInt(playersFromData.length - 1);
-        
-        console.log("IMPOSTER:: ",playersFromData[randomInt]);
-      } while (playersFromData[randomInt]['name'] === 'Admin');
-      postImposter(playersFromData[randomInt]);
-      alert('Imposter assigned');
-
+      // let numberImposterArray = Array(numberofimposters).fill();
+      // console.log(numberImposterArray);
+      Array(numberofimposters).fill().map((_, i) => asignAndPost(i));
       setRound(true);
       let roundData = {
         "number": roundNumber,
@@ -278,6 +273,19 @@ export default function Lobby({ playersFromData }) {
         "winner": "None",
       }
       postRoundData(roundData);
+    }
+
+    const asignAndPost = (i) => {
+      let randomInt = -1;
+      let newRandom = -1;
+      do {
+        newRandom = getRandomInt(playersFromData.length - 1);
+      } while(newRandom === randomInt || newRandom == -1 || playersFromData[newRandom]['name'] === 'Admin')
+      randomInt = newRandom;
+      let newImposter = playersFromData[randomInt]
+      postImposter(newImposter);
+      alert('Imposter assigned');
+      console.log('Imposter ', i, 'assigned');
     }
 
     const returnNewPlayer = (player) => {
@@ -326,24 +334,15 @@ export default function Lobby({ playersFromData }) {
       }
     }
 
-    const postImposter = async (imposter) => {
-      playersFromData.map(async (player) => {
-        let newPlayer = returnNewPlayer(player);
-        if (newPlayer["name"] === imposter["name"]) {
-          console.log("Imposter found");
-          newPlayer.imposter = true;
-          setImposter(newPlayer);
-          setIsImposter(true);
-        } else {
-          newPlayer.imposter = false;
-        }
-        console.log(newPlayer);
-        if (newPlayer.name != null) {
-          updatePlayerOnServer(newPlayer);
-        }
-        
-        console.log(playersFromData);
-      })
+    const postImposter = async (newImposter) => {
+      let newPlayer = returnNewPlayer(newImposter);
+      newPlayer.imposter = true;
+      console.log("New Player (Imposter)", newPlayer);
+      imposter.push(newPlayer);
+      setIsImposter(true);
+      if (newPlayer.name != null) {
+        updatePlayerOnServer(newPlayer);
+      }
     }
 
     const postRoundData = async (roundData) => {
@@ -383,11 +382,36 @@ export default function Lobby({ playersFromData }) {
       setIsImposter(false);
       setRound(false);
       console.log(imposter);
-      if (imposter != undefined && imposter.name != null) {
-        imposter.imposter = false;
-        updatePlayerOnServer(imposter);
-      }
+      resetImpostersOnServer();
       console.log("All players crewmate");
+      resetGhostsOnServer();
+      console.log("All ghosts reset");
+    }
+    
+    const resetImpostersOnServer = () => {
+      if (imposter != undefined && imposter.size != 0) {
+        
+        imposter.map((imp, i) => {
+          console.log('Imposter: ', i, ": ", imp);
+          imp.imposter = false;
+          if (imp.name != null) {
+            updatePlayerOnServer(imp);
+          }
+        })
+      }
+    }
+
+    const resetGhostsOnServer = () => {
+      if (ghosts != undefined && ghosts.size != 0) {
+        ghosts.forEach((ghost) => {
+          ghost.imposter = false;
+          ghost.kicked = false;
+          ghost.voted = false;
+          if (ghost.name != null) {
+            updatePlayerOnServer(ghost);
+          }
+        })
+      }
     }
 
     return (
@@ -409,6 +433,13 @@ export default function Lobby({ playersFromData }) {
                       ?
                       <span> Started</span>:<span> Not Started</span>
                     }
+                    </p>
+                    <p>
+                      Select Number of Imposters
+                      <ButtonGroup color="secondary" aria-label="outlined primary button group" style={{marginLeft: '1rem'}}>
+                        <Button onClick={() => setNumberofimposters(1)} variant={numberofimposters===1 ? "contained": "outlined"}>One</Button>
+                        <Button onClick={() => setNumberofimposters(2)} variant={numberofimposters===2 ? "contained": "outlined"}>Two</Button>
+                      </ButtonGroup>
                     </p>
                     <span>Active Players: {otherPlayers.size}</span>
                     <span>Ghosts: {ghosts.size}</span>
@@ -437,6 +468,7 @@ export default function Lobby({ playersFromData }) {
                           <Container maxWidth="sm">
                             
                           {
+                            result != undefined ?
                             result.type != undefined && result.player != undefined
                             ? 
                               result.type === 'imposter' 
@@ -515,6 +547,7 @@ export default function Lobby({ playersFromData }) {
                                     </span>
                                 </Grid>
                               </Grid>
+                            : null
                           }
                         </Container>
                           <Grid container justify="center" spacing={4} direction="column" alignItems="center">
