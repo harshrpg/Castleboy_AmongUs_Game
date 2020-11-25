@@ -105,6 +105,7 @@ export default function Lobby({ playersFromData }) {
     const [message, setMessage] = useState('')
     const [player, setPlayer] = useState({})
     const [otherPlayers, setOtherPlayers] = useState(new Set())
+    const [activeplayers, setActiveplayers] = useState(new Set())
     const [admin, setAdmin] = useState(false)
     const [vote, setVote] = useState(false)
     const [ghosts, setGhosts] = useState(new Set())
@@ -112,11 +113,14 @@ export default function Lobby({ playersFromData }) {
     const [imposter, setImposter] = useState([]);
     const [round, setRound] = useState(false);
     const [roundNumber, setRoundNumber] = useState(1)
-    const [playNumber, setPlayNumber] = useState(0)
+    const [playerNumber, setPlayerNumber] = useState(0)
     const [showVoting, setShowVoting] = useState(false)
     const [votingResults, setVotingResults] = useState(new Map())
     const [result, setResult] = useState({})
     const [numberofimposters, setNumberofimposters] = useState(1)
+    const [ghostNumber, setGhostNumber] = useState(0);
+
+    // ################# EFFECTS ###################
     useEffect(() => {
         setShowVoting(false);
         let query_vals = getUserFromCode(pass);
@@ -136,10 +140,50 @@ export default function Lobby({ playersFromData }) {
         });
 
         currentUserDataFromPlayers(query_vals[1]);
-        console.log(player);
+        // console.debug(player);
         
     },[player]);
     
+    useEffect(() => {
+      setShowVoting(true);
+    }, [votingResults]);
+
+    useEffect(() => {
+      if (imposter instanceof Array) {
+        setNumberofimposters(imposter.length);
+        console.info('TOTAL ACTIVE IMPOSTERS: ', imposter.length);
+      }
+    }, [imposter]);
+
+    useEffect(() => {
+      if (ghosts instanceof Set) {
+        setGhostNumber(ghosts.size);
+        console.info('TOTAL INACTIVE PLAYERS (GHOSTS): ', ghosts.size);
+        if (ghosts.size > 0) {
+          console.info('UPDATING GHOSTS ON SERVER');
+          ghosts.forEach((ghost) => {
+            ghost.kicked = true;
+            updatePlayerOnServer(ghost);
+          })
+        }
+      }
+    }, [ghosts]);
+
+    useEffect(() => {
+      if (activeplayers instanceof Set) {
+        setPlayerNumber(activeplayers.size);
+        console.info('TOTAL ACTIVE PLAYERS: ', activeplayers.size);
+      }
+      
+    }, [activeplayers]);
+
+    useEffect(() => {
+      console.log('====================================');
+      console.log('OTHER PLAYERS CHANGED HERE: ', otherPlayers);
+      console.log('====================================');
+    }, [otherPlayers])
+
+
     const currentUserDataFromPlayers = (user_name) => {
       playersFromData.map((playerFromData) => {
         if (typeof playerFromData.color === "string") {
@@ -152,60 +196,129 @@ export default function Lobby({ playersFromData }) {
           if (playerFromData.kicked) {
             ghosts.add(playerFromData)
           } else {
-            otherPlayers.add(playerFromData);
+            activeplayers.add(playerFromData);
           }
+          otherPlayers.add(playerFromData);
           
         }
-      })
+      });
+      
     }
 
+    
     const displayVotingResults = () => {
-      if (round) {
-        try {
-          fetch('/api/votes', {
-            method: 'GET',
-          }).then(response => response.json()).then(data => processVotingResult(data))
-          // Throw Error
-          // if (!res.ok) {
-          //   throw new Error(res.status)
-          // } else {
-          //   console.log('====================================');
-          //   console.log(res.json());
-          //   console.log('====================================');
-          // }
-        } catch (error) {
-          console.log(error);
-        }
-      } else {
-        alert('Round not yet started')
+      try {
+        fetch('/api/votes', {
+          method: 'GET',
+        }).then(response => response.json()).then(data => processVotingResult(data))
+        // Throw Error
+        // if (!res.ok) {
+        //   throw new Error(res.status)
+        // } else {
+        //   console.debug('====================================');
+        //   console.debug(res.json());
+        //   console.debug('====================================');
+        // }
+      } catch (error) {
+        console.error(error);
       }
       
     }
 
     const processVotingResult = (votingResult) => {
-      console.log('====================================');
-      console.log(votingResult.data);
-      console.log('====================================');
+      console.info('PROCESSING VOTING RESULTS');
+      console.debug('====================================');
+      console.debug(votingResult.data);
+      console.debug('====================================');
       let reformatVotingResult = convertVotingResultsToDisplayFormat(votingResult.data)
-      console.log('====================================');
-      console.log(reformatVotingResult);
-      console.log('====================================');
+      console.debug('====================================');
+      console.debug(reformatVotingResult);
+      console.debug('====================================');
       // setShowVoting(true);
       setVotingResults(reformatVotingResult);
-      let ghosted = findIfVotedIsImposter(reformatVotingResult, imposter, playersFromData);
-      console.log(ghosted);
+      let ghosted = findIfVotedIsImposter(reformatVotingResult, imposter, activeplayers);
+      console.debug('====================================');
+      console.debug("GHOST RESULTS");
+      console.debug(ghosted);
+      console.debug('====================================');
       setResult(ghosted);
+      console.debug('====================================');
+      console.debug('Resetting the number of active imposters');
+      if (ghosted !=undefined && ghosted.type != undefined && ghosted.player != undefined) {
+        if (ghosted.type === 'imposter'){
+          // TODO: Remove Imposters from imposter array
+          removeGhostedImposter(ghosted.player);
+          // TODO: Add Imposter to Ghost array
+          // TODO: Make useEffect() when imposter array changes or ghost array changes to post that data to server
+        }
+        if (ghosted.type === 'crewmate') {
+          // TODO: Add player to ghost array
+          addPlayerToGhosts(ghosted.player);
+        }
+
+
+      }
+      console.debug('====================================');
       // Send this ghosted data to server
-      prepareGhostDataAndUpdateServer(ghosted);
+      // prepareGhostDataAndUpdateServer(ghosted);
+    }
+    
+    const removeGhostedImposter = (ghostedImposterName) => {
+      
+      if (imposter != undefined && imposter instanceof Array && ghostedImposterName != undefined) {
+        console.info('====================================');
+        console.info('Removing Imposter from List of Imposters');
+        console.info('====================================');
+        let newImposter = []
+        imposter.map((imp) => {
+          if (imp.name != ghostedImposterName) {
+            imp.kicked = true;
+            newImposter.push(imp);
+            // let newPlayer = returnNewPlayer(imp);
+            updatePlayerOnServer(imp);
+          }
+        });
+
+        setImposter(newImposter);
+        addPlayerToGhosts(ghostedImposterName);
+      }
+
+    }
+
+    const addPlayerToGhosts = (ghostedPlayerName) => {
+      let newOtherPlayers = new Set();
+      console.log(ghosts);
+      console.log(activeplayers);
+      console.log(ghostedPlayerName.value);
+      if (ghosts != undefined && ghosts instanceof Set && ghostedPlayerName != undefined && activeplayers != undefined) {
+        console.info('====================================');
+        console.info('Adding removed Player to Ghosts');
+        console.info('====================================');
+        activeplayers.forEach((player) => {
+          if (player.name === ghostedPlayerName.value) {
+            player.kicked = true;
+            console.log('PLAYER BEING GHOSTED: ', player);
+            let newGhost = returnNewPlayer(player);
+            ghosts.add(newGhost);
+            updatePlayerOnServer(newGhost);
+          } else {
+            newOtherPlayers.add(player);
+          }
+        });
+        setActiveplayers(newOtherPlayers);
+        setGhosts(ghosts);
+        setGhostNumber(ghosts.size);  
+        console.log(ghosts);
+      }
     }
 
     const prepareGhostDataAndUpdateServer = (ghost) => {
       let newPlayer = {}
       if (ghost != undefined && ghost.type != undefined && ghost.player != undefined && playersFromData != undefined) {
-        console.log("Updating server with ghost data:  ", ghost);
+        console.debug("Updating server with ghost data:  ", ghost);
         playersFromData.map((player) => {
           if (player.name === ghost.player) {
-            console.log(ghost.player, " is ghosted and is a ", ghost.type);
+            console.debug(ghost.player, " is ghosted and is a ", ghost.type);
             newPlayer = returnNewPlayer(player);
             if (ghost.type === "imposter") {
               newPlayer.imposter = true;
@@ -214,23 +327,24 @@ export default function Lobby({ playersFromData }) {
             }
           }
         });
-        console.log("Updating Player: ", newPlayer);
-        if (newPlayer.name != null)
-          updatePlayerOnServer(newPlayer);
+        console.debug("Updating Player: ", newPlayer);
+        if (newPlayer.name != null){
+          
+          console.log('====================================');
+          console.log('THIS IMPOSTER IS SUPPOSED TO BE LOADED IN SERVER', newPlayer);
+          console.log('====================================');
+        }
+          // updatePlayerOnServer(newPlayer);
       }
       
       
     }
 
-    useEffect(() => {
-      setShowVoting(true);
-    }, [votingResults])
-
     const recordVoting = (otherPlayer) => {
       player.voted = true;
       setVote(player.voted);
-      console.log('Voting recorder');
-      console.log(player);
+      console.debug('Voting recorder');
+      console.debug(player);
       postData(otherPlayer)
     }
 
@@ -264,7 +378,7 @@ export default function Lobby({ playersFromData }) {
 
     const assignImposter = () => {
       // let numberImposterArray = Array(numberofimposters).fill();
-      // console.log(numberImposterArray);
+      // console.debug(numberImposterArray);
       Array(numberofimposters).fill().map((_, i) => asignAndPost(i));
       setRound(true);
       let roundData = {
@@ -285,7 +399,7 @@ export default function Lobby({ playersFromData }) {
       let newImposter = playersFromData[randomInt]
       postImposter(newImposter);
       alert('Imposter assigned');
-      console.log('Imposter ', i, 'assigned');
+      console.debug('Imposter ', i, 'assigned');
     }
 
     const returnNewPlayer = (player) => {
@@ -316,6 +430,9 @@ export default function Lobby({ playersFromData }) {
     }
 
     const updatePlayerOnServer = async (newPlayer) => {
+      console.debug('====================================');
+      console.debug('THE PLAYER TO UPLOAD IS: ', newPlayer);
+      console.debug('====================================');
       try {
         const res = await fetch('/api/players', {
           method: 'POST',
@@ -337,7 +454,7 @@ export default function Lobby({ playersFromData }) {
     const postImposter = async (newImposter) => {
       let newPlayer = returnNewPlayer(newImposter);
       newPlayer.imposter = true;
-      console.log("New Player (Imposter)", newPlayer);
+      console.debug("New Player (Imposter)", newPlayer);
       imposter.push(newPlayer);
       setIsImposter(true);
       if (newPlayer.name != null) {
@@ -374,30 +491,37 @@ export default function Lobby({ playersFromData }) {
     const resetRound = () => {
       setRound(false);
       setShowVoting(false);
+      
     }
 
     const restartRound = () => {
       console.warn("Restarting Round now");
-      console.log(playersFromData);
+      console.debug(playersFromData);
       setIsImposter(false);
       setRound(false);
-      console.log(imposter);
+      console.debug(imposter);
       resetImpostersOnServer();
-      console.log("All players crewmate");
+      console.debug("All players crewmate");
+
       resetGhostsOnServer();
-      console.log("All ghosts reset");
+      console.debug("All ghosts reset");
+
+      // resetActivePlayers();
+      setActiveplayers(new Set(otherPlayers));
     }
     
     const resetImpostersOnServer = () => {
       if (imposter != undefined && imposter.size != 0) {
         
         imposter.map((imp, i) => {
-          console.log('Imposter: ', i, ": ", imp);
+          console.debug('Imposter: ', i, ": ", imp);
           imp.imposter = false;
           if (imp.name != null) {
             updatePlayerOnServer(imp);
           }
-        })
+        });
+        
+        setImposter([]);
       }
     }
 
@@ -410,7 +534,8 @@ export default function Lobby({ playersFromData }) {
           if (ghost.name != null) {
             updatePlayerOnServer(ghost);
           }
-        })
+        });
+        setGhosts(new Set());
       }
     }
 
@@ -437,17 +562,13 @@ export default function Lobby({ playersFromData }) {
                     <p>
                       Select Number of Imposters
                       <ButtonGroup color="secondary" aria-label="outlined primary button group" style={{marginLeft: '1rem'}}>
-                        <Button onClick={() => setNumberofimposters(1)} variant={numberofimposters===1 ? "contained": "outlined"}>One</Button>
-                        <Button onClick={() => setNumberofimposters(2)} variant={numberofimposters===2 ? "contained": "outlined"}>Two</Button>
+                        <Button onClick={() => setNumberofimposters(1)} variant={imposter.length != 0 && imposter.length===1 ? "contained": imposter.length != 0 && imposter.length===2 ? "outlined": numberofimposters===1 ? "contained": "outlined"}>One</Button>
+                        <Button onClick={() => setNumberofimposters(2)} variant={imposter.length != 0 && imposter.length===2 ? "contained": imposter.length != 0 && imposter.length===1 ? "outlined": numberofimposters===2 ? "contained": "outlined"}>Two</Button>
                       </ButtonGroup>
                     </p>
-                    <span>Active Players: {otherPlayers.size}</span>
-                    <span>Ghosts: {ghosts.size}</span>
-                    {
-                      isImposter
-                      ?<span>Imposters: 1</span>
-                      :<span>Imposters: 0</span>
-                    }
+                    <span>Active Players: {playerNumber}</span>
+                    <span>Ghosts: {ghostNumber}</span>
+                    <span>Imposters: {numberofimposters}</span>
                     
                   </>
                   :
@@ -466,10 +587,11 @@ export default function Lobby({ playersFromData }) {
                         // ADMIN PAGE: SHOW VOTING
                         <>
                           <Container maxWidth="sm">
+                            {console.debug(result)}
                             
                           {
                             result != undefined ?
-                            result.type != undefined && result.player != undefined
+                            result.type != undefined 
                             ? 
                               result.type === 'imposter' 
                               ?
@@ -497,8 +619,11 @@ export default function Lobby({ playersFromData }) {
                                       </span>
                                   </Grid>
                                 </Grid>
+                                
                               : 
-                                <Grid
+                                result.type === 'crewmate' 
+                                ?
+                                  <Grid
                                   container
                                   direction="column"
                                   justify="center"
@@ -522,6 +647,8 @@ export default function Lobby({ playersFromData }) {
                                     </span>
                                   </Grid>
                                 </Grid>
+                                :
+                                  null
                             :
                               <Grid
                                 container
@@ -547,7 +674,30 @@ export default function Lobby({ playersFromData }) {
                                     </span>
                                 </Grid>
                               </Grid>
-                            : null
+                            : <Grid
+                            container
+                            direction="column"
+                            justify="center"
+                            alignItems="center"
+                            spacing={4}
+                          >
+                            <Grid item>
+                              <Card style={{width: 345, background: 'transparent'}}>
+                                <CardActionArea>
+                                    <CardMedia
+                                      style={{height: 200}}
+                                      image="/images/killer_loose.jpg"
+                                    />
+                                </CardActionArea>
+                              </Card>
+                              
+                            </Grid>
+                            <Grid item>
+                                <span className="title">
+                                  No one was ghosted
+                                </span>
+                            </Grid>
+                          </Grid>
                           }
                         </Container>
                           <Grid container justify="center" spacing={4} direction="column" alignItems="center">
@@ -605,9 +755,9 @@ export default function Lobby({ playersFromData }) {
                                           </div>
                                           <div className="card-content-child-action">
                                               {
-                                                player.kicked 
+                                                otherPlayer.kicked 
                                                   ? 
-                                                    player.imposter 
+                                                  otherPlayer.imposter 
                                                       ?
                                                         <p>Imposter kicked</p>
                                                       :
@@ -628,7 +778,7 @@ export default function Lobby({ playersFromData }) {
                               ))
                             }
                           </Grid>
-                          <Grid item ontainer justify="center" spacing={1}>
+                          <Grid item container justify="center" spacing={1}>
                             <Button classes={{
                                             root: classes.voting,
                                             label: classes.label,
@@ -719,8 +869,9 @@ export default function Lobby({ playersFromData }) {
                                               <p>{otherPlayer.name}</p>
                                             </div>
                                             <div className="card-content-child-action">
+                                              {console.log(otherPlayer)}
                                               {
-                                                player.kicked || otherPlayer.ghosted || vote ?
+                                                player.kicked || otherPlayer.kicked || vote ?
                                                 <Button variant="outlined" disabled>
                                                   Vote
                                                 </Button>

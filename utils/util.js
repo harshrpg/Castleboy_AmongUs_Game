@@ -33,53 +33,105 @@ export function convertVotingResultsToDisplayFormat(votingResult) {
 }
 
 export function findIfVotedIsImposter(votedPlayers, imposter, playersFromData) {
-    if ((votedPlayers != undefined) && (playersFromData != undefined)) {
+    console.debug('====================================');
+    console.debug("INPOSTER SENT TO UTILS");
+    console.debug(imposter);
+    console.debug('====================================');
+    if ((votedPlayers != undefined) && (playersFromData != undefined) && (imposter != undefined)) {
         let kickedPlayer = new Set();
         let kickedImposter = new Set();
-        let totalPlayers = playersFromData.length
-        let totalVotesNeededToBeKicked = totalPlayers / 2;
-        votedPlayers.forEach((value, key, _) =>{
-            if (value.length >= totalVotesNeededToBeKicked) {
+        let totalPlayers = playersFromData.size
+        let totalVotesNeededToBeKicked = (totalPlayers) / 2;
+        console.debug('====================================');
+        console.debug('Total votes needed to be kicked');
+        console.debug(totalVotesNeededToBeKicked);
+        console.debug('====================================');
+        let totalImposters = imposter.length;
+        let ghostResult = {}
+        if (totalImposters === 1) {
+            ghostResult = ghostsI1Imposter(votedPlayers, totalVotesNeededToBeKicked, kickedImposter, kickedPlayer, imposter[0]);
+        } else if (totalImposters === 2) {
+            ghostResult = ghosts2Imposters(votedPlayers, totalVotesNeededToBeKicked, kickedImposter, kickedPlayer, imposter);
+        }
+        return ghostResult;
+    }
+}
+
+const ghosts2Imposters = (votedPlayers, totalVotesNeededToBeKicked, kickedImposter, kickedPlayer, imposters) => {
+    votedPlayers.forEach((value, key, _) => {
+        if (value.length >= totalVotesNeededToBeKicked) {
+            imposters.forEach(imposter => {
                 if (ifImposter(key, imposter)) {
+                    console.debug(key, " is added to imposters list, Likely to be kicked");
                     kickedImposter.add(key);
                 } else {
+                    console.debug(key, " is added to players list, Likely to be ghosted");
                     kickedPlayer.add(key);
                 }
-            }
-        });
-        if (kickedImposter.size > 0) {
-            return {
-                "type": "imposter",
-                "player": kickedImposter.values().next()
+            });
+        }
+    });
+    console.debug('====================================');
+    console.debug("KICKED IMPOSTER");
+    console.debug(kickedImposter);
+    console.debug("KICKED PLAYER");
+    console.debug(kickedPlayer);
+    console.debug('====================================');
+    if (kickedImposter.size === 1) {
+        return {
+            "type": "imposter",
+            "player": kickedImposter.values().next()
+        }
+    } else if (kickedImposter.size > 1 || kickedPlayer.size > 1) {
+        return {
+            "type": undefined,
+            "player": undefined
+        }
+    } else if (kickedPlayer.size === 1) {
+        return {
+            "type": "crewmate",
+            "player": kickedPlayer.values().next()
+        }
+    }
+}
+
+const ghostsI1Imposter = (votedPlayers, totalVotesNeededToBeKicked, kickedImposter, kickedPlayer, imposter) => {
+    votedPlayers.forEach((value, key, _) =>{
+        if (value.length >= totalVotesNeededToBeKicked) {
+            if (ifImposter(key, imposter)) {
+                console.debug(key, " is added to imposters list, Likely to be kicked");
+                kickedImposter.add(key);
+            } else {
+                console.debug(key, " is added to players list, Likely to be ghosted");
+                kickedPlayer.add(key);
             }
         }
-        if (kickedPlayer.size > 1) {
-            return {
-                "type": undefined,
-                "player": undefined
-            }
-        } else if (kickedPlayer.size === 1) {
-            return {
-                "type": "crewmate",
-                "player": kickedPlayer.values().next()
-            }
+    });
+    if (kickedImposter.size > 0) {
+        return {
+            "type": "imposter",
+            "player": kickedImposter.values().next()
+        }
+    }
+    if (kickedPlayer.size > 1) {
+        return {
+            "type": undefined,
+            "player": undefined
+        }
+    } else if (kickedPlayer.size === 1) {
+        return {
+            "type": "crewmate",
+            "player": kickedPlayer.values().next()
         }
     }
 }
 
 function ifImposter(name, data) {
     let imposter = false
-    // data.map((player) => {
-    //     if (player.name === name && player.imposter) {
-    //         imposter = true;
-    //     }
-    // });
-    console.log(data);
-    // console.log(data.name === name && data.imposter);
     if (data.name === name && data.imposter) {
         imposter = true;
-        console.log(data);
-        console.log(name);
+        console.debug(data);
+        console.debug(name);
     }
     return imposter;
 }
