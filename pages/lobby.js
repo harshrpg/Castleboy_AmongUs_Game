@@ -489,7 +489,7 @@ export default function Lobby({ playersFromData }) {
     }
 
     const resetRound = () => {
-      setRound(false);
+      // setRound(false);
       setShowVoting(false);
       
     }
