@@ -37,6 +37,20 @@ export default async function handler(req, res) {
                 });
             }
             break;
+        case 'DELETE':
+            try {
+                await Vote.remove({})
+                res.status(200).json({
+                    success: true
+                });
+            } catch (error) {
+                console.error(error);
+                res.status(400).json({
+                    success: false,
+                    error: error
+                })
+            }
+            break;
         default:
             res.status(400).json({
                 success: false,

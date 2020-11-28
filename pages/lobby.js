@@ -205,6 +205,16 @@ export default function Lobby({ playersFromData }) {
       
     }
 
+    const deleteAllVotes = () => {
+      try {
+        fetch('/api/votes', {
+          method: 'DELETE'
+        }).then(res => res.json().then(json => {console.log(json);}))
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
     
     const displayVotingResults = () => {
       try {
@@ -238,8 +248,8 @@ export default function Lobby({ playersFromData }) {
       setVotingResults(reformatVotingResult);
       let ghosted = findIfVotedIsImposter(reformatVotingResult, imposter, activeplayers);
       console.debug('====================================');
-      console.debug("GHOST RESULTS");
-      console.debug(ghosted);
+      console.log("GHOST RESULTS");
+      console.log(ghosted);
       console.debug('====================================');
       setResult(ghosted);
       console.debug('====================================');
@@ -253,7 +263,7 @@ export default function Lobby({ playersFromData }) {
         }
         if (ghosted.type === 'crewmate') {
           // TODO: Add player to ghost array
-          addPlayerToGhosts(ghosted.player);
+          addPlayerToGhosts(ghosted.player, false);
         }
 
 
@@ -271,21 +281,23 @@ export default function Lobby({ playersFromData }) {
         console.info('====================================');
         let newImposter = []
         imposter.map((imp) => {
-          if (imp.name != ghostedImposterName) {
+          if (imp.name === ghostedImposterName) {
             imp.kicked = true;
-            newImposter.push(imp);
-            // let newPlayer = returnNewPlayer(imp);
+            console.log('IMPOSTER TO GHOST: ', imp)
             updatePlayerOnServer(imp);
+          } else {
+            newImposter.push(imp);
           }
         });
-
+        console.log('Number of Imposters: ', newImposter);
+        setNumberofimposters(newImposter.length);
         setImposter(newImposter);
-        addPlayerToGhosts(ghostedImposterName);
+        addPlayerToGhosts(ghostedImposterName, true);
       }
 
     }
 
-    const addPlayerToGhosts = (ghostedPlayerName) => {
+    const addPlayerToGhosts = (ghostedPlayerName, isImposterName) => {
       let newOtherPlayers = new Set();
       console.log(ghosts);
       console.log(activeplayers);
@@ -296,6 +308,9 @@ export default function Lobby({ playersFromData }) {
         console.info('====================================');
         activeplayers.forEach((player) => {
           if (player.name === ghostedPlayerName.value) {
+            if (isImposterName) {
+              player.imposter = true;
+            }
             player.kicked = true;
             console.log('PLAYER BEING GHOSTED: ', player);
             let newGhost = returnNewPlayer(player);
@@ -418,7 +433,7 @@ export default function Lobby({ playersFromData }) {
     }
 
     const returnColorObject = (colorMap) => {
-      if (colorMap != undefined) {
+      if (colorMap != undefined && colorMap instanceof Map) {
         return {
           "r": colorMap.get('r'),
           "g": colorMap.get('g'),
@@ -430,9 +445,16 @@ export default function Lobby({ playersFromData }) {
     }
 
     const updatePlayerOnServer = async (newPlayer) => {
-      console.debug('====================================');
-      console.debug('THE PLAYER TO UPLOAD IS: ', newPlayer);
-      console.debug('====================================');
+      if (newPlayer.color instanceof Map) {
+        console.log('====================================');
+        console.log('SKIPPING PLAYER: ', newPlayer);
+        console.log('====================================');
+        return;
+      } else {
+        console.log('====================================');
+        console.log('UPLOADING PLAYER: ', newPlayer);
+        console.log('====================================');
+      }
       try {
         const res = await fetch('/api/players', {
           method: 'POST',
@@ -490,6 +512,7 @@ export default function Lobby({ playersFromData }) {
 
     const resetRound = () => {
       // setRound(false);
+      deleteAllVotes();
       setShowVoting(false);
       
     }
@@ -532,7 +555,17 @@ export default function Lobby({ playersFromData }) {
           ghost.kicked = false;
           ghost.voted = false;
           if (ghost.name != null) {
-            updatePlayerOnServer(ghost);
+            console.log('====================================');
+            console.log('LOGGING EMPTY COLOR GHOSTS');
+            console.log(ghost);
+            // console.log(returnNewPlayer(ghost));
+            console.log('====================================');
+            if (ghost.color instanceof Map) {
+              updatePlayerOnServer(returnNewPlayer(ghost));
+            } else {
+              updatePlayerOnServer(ghost);
+            }
+            
           }
         });
         setGhosts(new Set());
@@ -559,13 +592,13 @@ export default function Lobby({ playersFromData }) {
                       <span> Started</span>:<span> Not Started</span>
                     }
                     </p>
-                    <p>
+                    <span>
                       Select Number of Imposters
                       <ButtonGroup color="secondary" aria-label="outlined primary button group" style={{marginLeft: '1rem'}}>
                         <Button onClick={() => setNumberofimposters(1)} variant={imposter.length != 0 && imposter.length===1 ? "contained": imposter.length != 0 && imposter.length===2 ? "outlined": numberofimposters===1 ? "contained": "outlined"}>One</Button>
                         <Button onClick={() => setNumberofimposters(2)} variant={imposter.length != 0 && imposter.length===2 ? "contained": imposter.length != 0 && imposter.length===1 ? "outlined": numberofimposters===2 ? "contained": "outlined"}>Two</Button>
                       </ButtonGroup>
-                    </p>
+                    </span>
                     <span>Active Players: {playerNumber}</span>
                     <span>Ghosts: {ghostNumber}</span>
                     <span>Imposters: {numberofimposters}</span>
