@@ -280,8 +280,10 @@ export default function Lobby({ playersFromData }) {
         console.info('Removing Imposter from List of Imposters');
         console.info('====================================');
         let newImposter = []
+        console.log('Imposters: ', imposter);
+        console.log('Ghosted Imposter\'s name:', ghostedImposterName);
         imposter.map((imp) => {
-          if (imp.name === ghostedImposterName) {
+          if (imp.name === ghostedImposterName.value) {
             imp.kicked = true;
             console.log('IMPOSTER TO GHOST: ', imp)
             updatePlayerOnServer(imp);
