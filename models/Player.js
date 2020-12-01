@@ -54,6 +54,9 @@ const PlayerSchema = new mongoose.Schema({
          * Has the player voted ?
          */
         type: Boolean,
+    },
+    killed: {
+        type: Boolean,
     }
 });
 

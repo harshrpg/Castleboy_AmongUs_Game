@@ -79,6 +79,7 @@ export default function User()  {
                 "imposter": false,
                 "kicked": false,
                 "voted": false,
+                "killed": false,
             }
             setUserInfo(userInfoLocal);
             // if (collection != undefined) {

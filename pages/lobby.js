@@ -6,7 +6,7 @@ import { getUserFromCode, convertVotingResultsToDisplayFormat, findIfVotedIsImpo
 import dbConnect from '../utils/dbConnect';
 import Player from '../models/Player';
 import Button from '@material-ui/core/Button';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles} from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
@@ -17,6 +17,9 @@ import { CardMedia } from '@material-ui/core';
 import Card from '@material-ui/core/Card';
 import ButtonGroup from '@material-ui/core/ButtonGroup';
 import CardActionArea from '@material-ui/core/CardActionArea';
+
+// const redTheme = createMuiTheme({ palette: { primary: 'red' } })
+
 const useStyles = makeStyles({
   imposter: {
     background: 'linear-gradient(45deg, #cc2b5e 30%, #753a88 90%)',
@@ -429,6 +432,7 @@ export default function Lobby({ playersFromData }) {
           "imposter": player.imposter,
           "kicked": player.kicked,
           "voted": player.voted,
+          "killed": player.killed,
       }
       }
       
@@ -472,6 +476,17 @@ export default function Lobby({ playersFromData }) {
         }
       } catch (error) {
         setMessage('Failed to add player');
+      }
+    }
+
+    const postKilledPlayer = async (killedPlayer) => {
+      killedPlayer.killed = true
+      let newPlayer = returnNewPlayer(killedPlayer);
+      setOtherPlayers(otherPlayers);
+      newPlayer.kicked = true;
+      newPlayer.killed = true;
+      if (newPlayer.name != null) {
+        updatePlayerOnServer(newPlayer);
       }
     }
 
@@ -532,6 +547,7 @@ export default function Lobby({ playersFromData }) {
       console.debug("All ghosts reset");
 
       // resetActivePlayers();
+      resetOtherPlayersOnServer();
       setActiveplayers(new Set(otherPlayers));
     }
     
@@ -541,6 +557,7 @@ export default function Lobby({ playersFromData }) {
         imposter.map((imp, i) => {
           console.debug('Imposter: ', i, ": ", imp);
           imp.imposter = false;
+          imp.killed = false;
           if (imp.name != null) {
             updatePlayerOnServer(imp);
           }
@@ -555,6 +572,7 @@ export default function Lobby({ playersFromData }) {
         ghosts.forEach((ghost) => {
           ghost.imposter = false;
           ghost.kicked = false;
+          ghost.killed = false;
           ghost.voted = false;
           if (ghost.name != null) {
             console.log('====================================');
@@ -571,6 +589,31 @@ export default function Lobby({ playersFromData }) {
           }
         });
         setGhosts(new Set());
+      }
+    }
+
+    const resetOtherPlayersOnServer = () => {
+      if (otherPlayers != undefined && otherPlayers.size != 0) {
+        otherPlayers.forEach((player) => {
+          player.imposter = false;
+          player.kicked = false;
+          player.killed = false;
+          player.voted = false;
+          if (player.name != null) {
+            console.log('====================================');
+            console.log('Player to be uploaded');
+            console.log(player);
+            // console.log(returnNewPlayer(player));
+            console.log('====================================');
+            if (player.color instanceof Map) {
+              updatePlayerOnServer(returnNewPlayer(player));
+            } else {
+              updatePlayerOnServer(player);
+            }
+            
+          }
+        });
+        setOtherPlayers(otherPlayers);
       }
     }
 
@@ -781,7 +824,7 @@ export default function Lobby({ playersFromData }) {
                                 otherPlayer.name != null
                                 ?
                                   <div key={otherPlayer._id}>
-                                    <div className="card">
+                                    <div className={otherPlayer.kicked ? 'card card-inactive' : otherPlayer.killed? 'card card-killed' : 'card card-active'}>
                                       <div className="card-content">
                                         <div className="card-content-child-names-action">
                                           <div className="card-content-child-names">
@@ -798,8 +841,15 @@ export default function Lobby({ playersFromData }) {
                                                       :
                                                         <p>Crewmate Kicked</p>
                                                   :
-                                                    <p>Player active</p>
+                                                  otherPlayer.killed
+                                                    ?
+                                                      <p>Player killed</p>
+                                                    :
+                                                      <p>Player active</p>
                                               }
+                                              <Button color="primary" variant="outlined" onClick={() => {otherPlayer.killed = true; postKilledPlayer(otherPlayer)}}>
+                                                  Killed
+                                              </Button>
                                           </div>
                                         </div>
                                         <div className="card-content-child-color" style={{backgroundColor: `rgba(${parseInt(otherPlayer.color.get('r'))}, ${parseInt(otherPlayer.color.get('g'))}, ${parseInt(otherPlayer.color.get('b'))}, ${parseInt(otherPlayer.color.get('a'))})`}} >
@@ -854,7 +904,7 @@ export default function Lobby({ playersFromData }) {
                     <Grid container justify="center" alignItems="center" direction="column" spacing={4}>
                       <Grid container justify="center" spacing={4}>
                         <div key={player._id}>   
-                          <div className="card self">
+                          <div className="card self card-active">
                             <div className="card-content">
                               <div className="card-content-child-names-action">
                                 <div className="card-content-child-names">
@@ -896,7 +946,7 @@ export default function Lobby({ playersFromData }) {
                                   otherPlayer.name != 'Admin' && otherPlayer.name != null
                                   ?
                                     <div key={otherPlayer._id}>
-                                      <div className="card">
+                                      <div className="card card-active">
                                         <div className="card-content">
                                           <div className="card-content-child-names-action">
                                             <div className="card-content-child-names">
@@ -1035,9 +1085,22 @@ export default function Lobby({ playersFromData }) {
                             text-align: left;
                             color: inherit;
                             text-decoration: none;
-                            border: 1px solid #eaeaea;
+                            
                             border-radius: 10px;
                             transition: color 0.15s ease, border-color 0.15s ease;
+                          }
+
+                          .card-active {
+                            border: 1px solid #eaeaea;
+                          }
+
+                          .card-killed {
+                            border: 1px solid #b71c1c;
+                          }
+
+                          .card-inactive {
+                            border: 1px solid #828282;
+                            color: #828282
                           }
 
                           .card-content {
