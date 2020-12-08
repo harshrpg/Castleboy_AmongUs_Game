@@ -27,6 +27,9 @@ const useStyles = makeStyles({
     },
   });
 
+const getRandomInt = (max) => {
+  return Math.floor(Math.random() * Math.floor(max));
+}
 export default function Tasks({playersFromData}) {
     const classes = useStyles();
     const router = useRouter();
@@ -36,7 +39,8 @@ export default function Tasks({playersFromData}) {
     const [user, setUser] = useState('');
     const [authenticated, setAuthenticated] = useState(false);
     const [load, setLoad] = useState(false);
-    const [isImposter, setIsImposter] = useState(false)
+    const [isImposter, setIsImposter] = useState(false);
+    const [fiveTasks, setFiveTasks] = useState([])
 
     console.log('====================================');
     console.log(playersFromData);
@@ -58,29 +62,47 @@ export default function Tasks({playersFromData}) {
 
             getIfPlayerImposter(query_vals[1]);
         }
-        
-        
-      },[]);
-
-      const getIfPlayerImposter = (username) => {
-        if (playersFromData != undefined && user != undefined) {
-          console.log("settingImposter");
-          console.log(username);
-          playersFromData.map((player) => {
-            if (player.name === username && player.imposter) {
-              setIsImposter(true);
-              console.log(username, "is Imposter");
-            }
-          })
+        let arr = []
+        while(arr.length < 5){
+            var r = Math.floor(Math.random() * 5) + 1;
+            if(arr.indexOf(r) === -1) arr.push(r);
         }
-      }
 
-      const goToLobby = () => {
-        router.push({
-          pathname: "/lobby",
-          query: {pass: pass}
+        console.info("Getting random tasks");
+        arr.map((i) => {
+          fiveTasks.push(tasks[i]);
+        });
+        
+
+        
+
+        console.log('====================================');
+        console.log(fiveTasks);
+        console.log('====================================');
+
+        
+        
+    },[]);
+
+    const getIfPlayerImposter = (username) => {
+      if (playersFromData != undefined && user != undefined) {
+        console.log("settingImposter");
+        console.log(username);
+        playersFromData.map((player) => {
+          if (player.name === username && player.imposter) {
+            setIsImposter(true);
+            console.log(username, "is Imposter");
+          }
         })
       }
+    }
+
+    const goToLobby = () => {
+      router.push({
+        pathname: "/lobby",
+        query: {pass: pass}
+      })
+    }
     return (
         <div>
             {
@@ -131,7 +153,7 @@ export default function Tasks({playersFromData}) {
                                 Your Tasks {user}
                             </h1>
                             {
-                                tasks.map((task) => (
+                                fiveTasks.map((task) => (
                                     <span className="taskCover">
                                         {
                                             task['type'] === 'electrical'

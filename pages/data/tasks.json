@@ -6,13 +6,13 @@
         "type": "admin", "value": "Captain TJ is a hardworking pupper. Your job is to pamper him. Brush him for 10 seconds"
     },
     {
-        "type": "communications", "value": "Can you use the tablet and welcome the aliens from all the portals on the wall ?"
+        "type": "communications", "value": "Can you use the tablet and welcome the aliens ?. Mind that they come with their own drones. Use the AR app Visiting Friends menu"
     },
     {
         "type": "security", "value": "Make sure all the doors in the house are closed"
     },
     {
-        "type": "electrical", "value": "Our pizza box home made led circuit is broken. Can you fix it major ?"
+        "type": "electrical", "value": "White contains all colors. More colors means more information. Please make sure our white light circuit is working"
     },
     {
         "type": "admin", "value": "We need ventilation, Open all the doors lieutenant"
@@ -22,5 +22,23 @@
     },
     {
         "type": "admin", "value": "Make sure aliens don't access our security systems. Find the key card (it's green) and swipe it on the security phone"
+    },
+    {
+        "type": "admin", "value": "There seems a shortage in O2 supplies. Check the oxygen level. Use the AR app Admin:Check Status menu"
+    },
+    {
+        "type": "security", "value": "Make sure our friends on Mars are safe and working. Use the AR app Make them work menu"
+    },
+    {
+        "type": "security", "value": "We are under attack. Pot one ball on the snooker table"
+    },
+    {
+        "type": "communications", "value": "We need to prepare and send a signal, set the pool table"
+    },
+    {
+        "type": "communications", "value": "Our star has 25 neighbours, take a selfie with the stars. Make sure you also include our space ship"
+    },
+    {
+        "type": "admin", "value": "Bin day. Clean the bin"
     }
 ]
