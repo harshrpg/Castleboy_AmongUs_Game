@@ -1,12 +1,9 @@
 [
     {
-        "type": "electrical", "value": "Somebody has broken the connection for security buzzers. Go and fix it"
-    },
-    {
         "type": "admin", "value": "Captain TJ is a hardworking pupper. Your job is to pamper him. Brush him for 10 seconds"
     },
     {
-        "type": "communications", "value": "Can you use the tablet and welcome the aliens ?. Mind that they come with their own drones. Use the AR app Visiting Friends menu"
+        "type": "communications", "value": "Can you welcome the aliens ?. Mind that they come with their own drones. Use the AR app Visiting Friends menu"
     },
     {
         "type": "security", "value": "Make sure all the doors in the house are closed"
@@ -18,13 +15,7 @@
         "type": "admin", "value": "We need ventilation, Open all the doors lieutenant"
     },
     {
-        "type": "admin", "value": "Find the treasure cups and make a tower. We need to impress the aliens"
-    },
-    {
-        "type": "admin", "value": "Make sure aliens don't access our security systems. Find the key card (it's green) and swipe it on the security phone"
-    },
-    {
-        "type": "admin", "value": "There seems a shortage in O2 supplies. Check the oxygen level. Use the AR app Admin:Check Status menu"
+        "type": "admin", "value": "There seems a shortage in O2 supplies. Check the oxygen level. Use the AR app Admin:Check Status menu and find the oxygen tag"
     },
     {
         "type": "security", "value": "Make sure our friends on Mars are safe and working. Use the AR app Make them work menu"
@@ -40,5 +31,14 @@
     },
     {
         "type": "admin", "value": "Bin day. Clean the bin"
+    },
+    {
+        "type": "security", "value": "Have you scanned yourself for the virus ? Use the AR app Admin:Check Status menu and find the drone"
+    },
+    {
+        "type": "communications", "value": "Say helo to your mates on Mars. Use the AR app Admin:Check Status menu and find the astronaut"
+    },
+    {
+        "type": "electricals", "value": "Check if our electrical volcanic fissure system is working. Use the AR app Admin: Check Status menu and find the fissures"
     }
 ]
