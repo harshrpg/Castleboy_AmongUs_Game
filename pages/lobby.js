@@ -359,6 +359,8 @@ export default function Lobby({ playersFromData }) {
       
       
     }
+    
+    let randomInt = -1;
 
     const recordVoting = (otherPlayer) => {
       player.voted = true;
@@ -410,7 +412,6 @@ export default function Lobby({ playersFromData }) {
     }
 
     const asignAndPost = (i) => {
-      let randomInt = -1;
       let newRandom = -1;
       do {
         newRandom = getRandomInt(playersFromData.length - 1);
@@ -542,7 +543,7 @@ export default function Lobby({ playersFromData }) {
       console.debug(imposter);
       resetImpostersOnServer();
       console.debug("All players crewmate");
-
+      randomInt = -1;
       resetGhostsOnServer();
       console.debug("All ghosts reset");
 
